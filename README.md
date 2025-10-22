@@ -1,6 +1,6 @@
 # Integrating Heterogeneous Data to Address Endemic Diseases in Broiler Production: insights from a Polish case study
 
-This repository contains the R code and analysis pipeline for the paper:"Integrating heterogeneous data to address endemic diseases in broiler production: insights from a Polish case study." 
+This repository contains the R code and analysis pipeline for the paper: "Integrating heterogeneous data to address endemic diseases in broiler production: insights from a Polish case study." 
 
 Project funded by the European Union’s Horizon 2020 research and innovation program under grant agreement No. 101000494 (DECIDE). 
 
