@@ -1,8 +1,8 @@
-# README: Integrating Heterogeneous Data to Address Endemic Diseases in Broiler Production
+# Integrating Heterogeneous Data to Address Endemic Diseases in Broiler Production: insights from a Polish case study
 
 This repository contains the R code and analysis pipeline for the paper:"Integrating heterogeneous data to address endemic diseases in broiler production: insights from a Polish case study." 
 
-Porject funded by the European Union’s Horizon 2020 research and innovation program under grant agreement No. 101000494 (DECIDE). 
+Project funded by the European Union’s Horizon 2020 research and innovation program under grant agreement No. 101000494 (DECIDE). 
 
 ## Study Abstract: 
 
@@ -48,7 +48,7 @@ The necessary data files for this analysis are publicly available on Zenodo. Bef
     * Lab_2024-04-11A.csv
     * Prophylaxis_2024-04-10A.csv
     
-The main.R script is configured to read these files from this specific location. 
+The main.R script is configured to read these files from this specific location and execute the analysis by sequentially rendering the three R Markdown files (.Rmd) as HTML reports into the **Analysis/** folder. 
 
 
 ## How to Run the Analysis
@@ -63,7 +63,8 @@ After successfully downloading and placing the data files in the Data/ folder, f
   * Open the R console or RStudio.
   * Set the working directory to the root of this repository.
   * Download the required library packages and their dependencies manually or using  install.packages([name of the package], dependencies = TRUE) function
-  * Run the main script
+  * Run the **main.R** script
+  * Check outputs once the script ran in the **Analysis/** folder.
 
-The main.R script will execute the analysis by sequentially rendering the three R Markdown files (.Rmd) as HTML reports into the **Analysis/** folder.
+
 
