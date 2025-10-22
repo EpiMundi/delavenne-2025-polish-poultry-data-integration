@@ -1,0 +1,325 @@
+---
+title: "Data preparation"
+author: "Camille Delavenne"
+date: "2025-08-31"
+output: html_document
+---
+# Quick description of raw data
+
+```{r, skimr_digits = 10}
+data_production %>%  skim()
+data_lab %>%  skim()
+data_prophylaxis  %>%  skim()
+```
+
+# Production Data
+## Preparing data
+### Defining data format 
+
+```{r, skimr_digits = 10}
+data_production %>%  skim()
+data_lab %>%  skim()
+data_prophylaxis  %>%  skim()
+
+data_production <- data_production  %>%  dplyr::select (!where(is.logical)) %>% 
+  mutate (Id.farmer= Id_farmer,
+          Birds.placement.date.max = case_when(Birds.placement.date.max == "" ~ Birds.placement.date.min,
+                                               TRUE ~ Birds.placement.date.max ),
+          End.date.max = case_when(End.date.max == "" ~ End.date.min,
+                                   TRUE ~ End.date.max )) %>% 
+  mutate( Birds.placement.date.min = as.Date(Birds.placement.date.min, "%d.%m.%Y"),  
+          Birds.placement.date.max = as.Date(Birds.placement.date.max, "%d.%m.%Y"),
+          End.date.min = as.Date(End.date.min, "%d.%m.%Y"),
+          End.date.max = as.Date(End.date.max, "%d.%m.%Y")) %>% 
+  mutate (Id_farmer= as.factor(Id_farmer),
+          Chicken_house = as.factor (Chicken.house),
+          Production_year = as.factor (Production.year),
+          Production_cycle = as.factor(Production.cycle)) %>% 
+  rename (EPEF = EWW,
+          FPLS = Score,
+          Mortality = Deaths,
+          Mortality.. = Deaths.. ) 
+
+#defining production data
+
+data_production <- data_production %>% mutate (across (12:30, as.numeric), across (31:34, as.numeric)) %>%  
+  mutate (Condemnation.. = Condemnation.. * 100)
+data_production$production_length_min <- day(as.period (interval (data_production$Birds.placement.date.max, data_production$End.date.min), unit="day"))
+data_production$production_length_max <- day(as.period (interval (data_production$Birds.placement.date.min, data_production$End.date.max), unit="day"))
+data_production$production_mean <- (data_production$production_length_min+ data_production$production_length_max)/2
+
+date <- data_production %>%  dplyr::select(production_mean, Mean.day.of.weighting )
+
+
+```
+
+### Defining unique identifier for flocks
+```{r, skimr_digits = 10}
+
+
+data_production1 <- data_production %>%ungroup () %>%  mutate (Id.farm = paste0 (Id_farmer),
+                                               Id.chickenhouse = paste0(Id_farmer, "\n", Chicken.house)) %>% 
+  mutate (Id_farm = as.factor (Id.farm),
+          Id_chickenhouse =as.factor (Id.chickenhouse)) 
+
+
+
+```
+
+### Linking variables with extrnal standrad
+#### Time - Attrbute season to productions
+```{r}
+#names <- names(dplyr::select(data_production, c(9:10, 12:32, 35:38,43:44)))
+
+season <- data_production1 %>% 
+  ungroup ()%>% 
+  dplyr::select (Id.chickenhouse, Birds.placement.date.min, End.date.max ) %>% 
+  mutate (  interval_placement = interval (Birds.placement.date.min,  End.date.max)) %>% 
+  mutate ( winter_int1 = as.duration(lubridate::intersect(interval_placement, interval (ymd ("2017-12-01"), ymd ("2018-03-01")))),
+         winter_int2 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2018-12-01"), ymd ("2019-03-01")))),
+         winter_int3 =   as.duration(lubridate::intersect(interval_placement, interval (ymd ("2019-12-01"), ymd ("2020-03-01")))),
+         winter_int4 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2020-12-01"), ymd ("2021-03-01")))),
+          winter_int5 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2021-12-01"), ymd ("2022-03-01")))),
+          winter_int6 = as.duration(lubridate::intersect(interval_placement, interval (ymd ("2022-12-01"), ymd ("2023-03-01")))),
+         
+         spring_int1 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2018-03-01"), ymd ("2018-05-31")))),
+         spring_int2 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2019-03-01"), ymd ("2019-05-31")))),
+         spring_int3 =   as.duration(lubridate::intersect(interval_placement, interval (ymd ("2020-03-01"), ymd ("2020-05-31")))),
+         spring_int4 =   as.duration(lubridate::intersect(interval_placement, interval (ymd ("2021-03-01"), ymd ("2021-05-31")))),
+          spring_int5 =   as.duration(lubridate::intersect(interval_placement, interval (ymd ("2022-03-01"), ymd ("2022-05-31")))),
+          spring_int6 = as.duration(lubridate::intersect(interval_placement, interval (ymd ("2023-03-01"), ymd ("2023-05-31")))),
+         
+         summer_int1 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2018-06-01"), ymd ("2018-08-31")))),
+         summer_int2 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2019-06-01"), ymd ("2019-08-31")))),
+         summer_int3 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2020-06-01"), ymd ("2020-08-31")))),
+         summer_int4 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2021-06-01"), ymd ("2021-08-31")))),
+          summer_int5 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2022-06-01"), ymd ("2022-08-31")))),
+          summer_int6 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2023-06-01"), ymd ("2023-08-31")))),
+         
+         
+         automn_int1 =   as.duration(lubridate::intersect(interval_placement, interval (ymd ("2018-09-01"), ymd ("2018-11-30")))),
+         automn_int2 =   as.duration(lubridate::intersect(interval_placement, interval (ymd ("2019-09-01"), ymd ("2019-11-30")))),
+         automn_int3 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2020-09-01"), ymd ("2020-11-30")))),
+         automn_int4 =   as.duration(lubridate::intersect(interval_placement, interval (ymd ("2021-09-01"), ymd ("2021-11-30")))),
+          automn_int5 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2022-09-01"), ymd ("2022-11-30")))),
+          automn_int6 =  as.duration(lubridate::intersect(interval_placement, interval (ymd ("2023-09-01"), ymd ("2023-11-30"))))) %>% 
+  
+  mutate (Winter = pmax (winter_int1, winter_int2,winter_int3,winter_int4,winter_int5,winter_int6, na.rm =T),
+          Spring = pmax (spring_int1, spring_int2,spring_int3,spring_int4,spring_int5,spring_int6, na.rm =T),
+          Summer = pmax (summer_int1, summer_int2,summer_int3,summer_int4,summer_int5,summer_int6, na.rm =T),
+          Automn = pmax (automn_int1, automn_int2,automn_int3,automn_int4,automn_int5,automn_int6, na.rm =T)) %>% 
+  dplyr::select (Id.chickenhouse, Birds.placement.date.min, Winter, Spring, Summer, Automn) %>% 
+  pivot_longer (cols= c(Winter, Spring, Summer, Automn), names_to = "season", values_to = "days_duration") %>% 
+  filter (!is.na(days_duration)) %>% 
+  ungroup () %>% 
+  group_by(Id.chickenhouse, Birds.placement.date.min) %>% 
+  mutate (max_duration = max (days_duration)) %>% 
+  ungroup () %>% 
+  filter (max_duration == days_duration) %>% 
+  unique () %>% 
+  dplyr:: select (Id.chickenhouse, Birds.placement.date.min, season) %>% 
+  group_by(Id.chickenhouse, Birds.placement.date.min) %>% 
+  mutate (double = n(),
+          n_season = case_when (season == "Winter" ~ 1, 
+                         season == "Spring" ~ 2, 
+                         season == "Summer" ~ 3, 
+                         season == "Automn" ~ 4 )) %>% 
+  ungroup () %>% 
+  filter (double== 1 | (double == 2 & n_season == 1) ) %>% #created because deouble only on winter and spring => kept season when birds are young beacuse this is when they are the most vulnerable
+  dplyr:: select(Id.chickenhouse, Birds.placement.date.min, season) 
+
+data_production1 <- data_production1 %>%  left_join(season, by = c ("Id.chickenhouse", "Birds.placement.date.min"))                                       
+
+```
+
+#### Define farm size bases on the number of chicken houses
+```{r}
+                               
+brB <- c(0, 1.1, 2.1, 7,  25 )
+labelchoisie_B <- c("1 ckhouse", "2 ckhouse",  "[3-6] ckhouse", ">6 ckhouse")
+
+chicken_farm_type_finalB<- data_production1 %>% 
+  ungroup () %>% 
+  group_by(Id_farm) %>% 
+  mutate (n= length(unique(Id.chickenhouse))) %>% 
+  ungroup () %>%
+  mutate (farm_type = cut(n, breaks = brB, include.lowest = TRUE, labels = labelchoisie_B)) %>% 
+  dplyr:: select( Id_farm, farm_type) %>% unique () 
+
+data_production1 <- data_production1%>% left_join(chicken_farm_type_finalB, by = "Id_farm")
+
+```
+
+
+## Remove flocks with issues
+### Remove flocks with missing information outlier
+```{r}
+
+data_production_missing<- data_production %>%  ungroup () %>% 
+  filter (is.na(Birds.placement.date.min) | is.na(Birds.placed) | is.na(Birds.sold) | is.na(Mean.day.of.weighting))
+
+
+data_production1<- data_production1 %>%  ungroup () %>% 
+  filter (!is.na(Birds.placement.date.min)) %>% 
+  filter (!is.na(Birds.placed)) %>% 
+  filter (!is.na(Birds.sold))%>% 
+  filter (!is.na(Mean.day.of.weighting))
+
+```
+
+### Remove flocks with high mortality (outlier)
+```{r}
+data_production_outlier <- data_production1 %>% filter (Mortality.. == 50 | Mortality.. > 50)
+data_production2 <- data_production1 %>% filter (Mortality.. < 50) # only removed the death due to a suffocation event
+
+```
+
+
+# Laboratory data
+## Preparing data
+### Defining data format
+```{r}
+
+data_lab <- data_lab %>% 
+  mutate (Id_farmer = as.factor (Id_farmer),
+          Chicken_house = as.factor(Chicken_house),
+          Production_year =as.factor (Production_year),
+          Production_cycle =as.factor (Production_cycle),
+          animal_id = as.factor(animal_id),
+          Lab_test_category = as.factor(Lab_test_category),
+          Lab_test = as.factor(Lab_test),
+          Specific_strain = as.factor(Specific_strain),
+          Sample_definition = as.factor( Sample_definition),
+          Unit_result_quantitative = as.factor(Unit_result_quantitative),
+          Result_qualitative = as.factor(toupper ( Result_qualitative)),
+          Test_type = as.factor (Test_type)) 
+
+```
+
+### Defining unique identifier for flocks and linking reuslts to reference tables
+```{r}
+print (paste0(nrow (data_lab), " number of disctinctive data analysis"))
+
+Laboratory_analysis <- data_lab %>%
+  ungroup () %>%  
+  mutate (
+          Id_chickenhouse = paste0(Id_farmer,"\n", Chicken_house),
+          Id_analysis = paste0(Id_farmer,"\n",  Chicken_house, "\n", as.character(Lab_test_date))) %>% 
+  mutate (Id_farm = as.factor (Id_farmer),
+          Id_chickenhouse =as.factor (Id_chickenhouse),
+          Id_analysis = as.factor (Id_analysis)) %>% 
+  mutate (Lab_test = case_match (Lab_test, "AMXcv.etc." ~ "AMXcv", .default = Lab_test)) %>% 
+  left_join (code_microorganism, by = c(  "Sample_definition" = "Code" )) %>% 
+  rename ( "Microorganism_AMR" = "Name") %>% 
+  left_join (code_microorganism, by = c(  "Lab_test" = "Code" )) %>% 
+  rename ( "Microorganism_identification" = "Name") %>% 
+  left_join (code_ATB, by = c(  "Lab_test" = "Code" )) %>% rename ( "ATB" = "Name")
+
+```
+
+
+
+
+# Prophylaxis data
+## Preparing data
+### Defining data format
+
+```{r}
+data_prophylaxis <- data_prophylaxis %>% mutate (Id_farmer = as.factor (Id_farmer), 
+                                                 Chicken_house = as.factor(toupper(str_trim(Chicken.house))),
+                                                 Production_year =as.factor (Production.year),
+                                                 Production_cycle =as.factor (Production.cycle.date),
+                                                 inputtype = as.factor(Inputtype),
+                                                 Input = as.factor (Input)) 
+
+```
+
+### Defining unique identifier for flocks
+```{r}
+Prophylaxis_analysis <- data_prophylaxis %>%
+  mutate (Start.production = as.Date(Start.production, "%d.%m.%Y")) %>% 
+  mutate (Id_farm = as.factor (Id_farmer),
+          Id_chickenhouse = as.factor (paste0(Id_farmer, "\n", Chicken.house) ),
+          Id_production = as.factor (paste0(Id_farmer, "\n", Chicken.house, "\n", Start.production) ))%>% 
+          unique ()
+
+```
+
+# Combining data
+
+```{r}
+# Defining laboratory id
+data_lab_id <- Laboratory_analysis  %>%  
+  group_by(Id_farm, Id_chickenhouse, Id_analysis, Lab_test_date) %>% 
+  summarise (source_lab = 1) %>% 
+  ungroup ()
+
+# Defining production id
+data_prod_id <- data_production2  %>% 
+  group_by(Id_farm, Id_chickenhouse, Birds.placement.date.min, End.date.max) %>% 
+  summarise (source_prod = 1)%>% 
+  ungroup ()
+
+# Defining prohylaxis id
+data_prophy_id <- Prophylaxis_analysis  %>% 
+  group_by(Id_farm, Id_chickenhouse,  Start.production) %>%
+  summarise (source_prophy = 1) %>% 
+  rename (Birds.placement.date.min = Start.production)  %>% ungroup ()
+
+# Merging ids based on chicken house names
+data_merge <- data_prod_id %>% 
+  full_join(data_prophy_id, by = c("Id_farm", "Id_chickenhouse",  "Birds.placement.date.min")) %>% 
+  full_join(data_lab_id, by = c("Id_farm", "Id_chickenhouse"))
+
+# Cleaning merges based on date of production (more than one production in a single chicken house)
+data_merge1 <- data_merge %>%
+  mutate (Lab_test_date = as.Date(Lab_test_date, "%Y-%m-%d")) %>%
+  mutate ( Source_lab_join = case_when (  is.na (source_prod) ~ 0,
+                                          source_prod ==1 & (Lab_test_date %within% interval (Birds.placement.date.min, End.date.max + 7 ))  ~ 1,
+                                          .default =  2))
+                                      
+data_merge1 <- data_merge1 %>%
+  filter ( Source_lab_join <2 ) %>% 
+  unique ()
+
+# Identifying the different lab results, production  or prophylaxis that couldn't be intersected
+missing_lab <- data_merge1 %>% 
+  right_join (data_lab_id, by = "Id_analysis") %>% 
+  filter (is.na(Id_farm.x)) 
+
+missing_lab <- data_merge %>%  
+  filter (Id_analysis %in% unique(missing_lab$Id_analysis)) %>% 
+  mutate (Lab_test_date = as.Date(Lab_test_date, "%Y-%m-%d"),
+          Birds.placement.date.min = NA,
+          End.date.max = NA,
+          source_prod = NA, 
+          source_prophy = NA ) %>% unique ()
+
+data_merge1 <- data_merge1 %>% 
+  bind_rows(missing_lab)
+
+missing_prophylaxis <-  data_merge1 %>%  
+  right_join(data_prophy_id, by = c("Id_farm", "Id_chickenhouse",  "Birds.placement.date.min"))
+
+missing_lab <-  data_merge1  %>%  
+  group_by(Id_farm) %>% 
+  summarise (source_prod_tot = sum (source_prod, na.rm = T), source_lab_tot= sum (source_lab, na.rm = T), source_porphy_tot= sum (source_prophy, na.rm = T) ) %>% 
+  filter ( source_lab_tot == 0) %>% 
+  ungroup () 
+
+missing_production <-  data_merge1  %>%  
+  group_by(Id_farm, Id_chickenhouse) %>% 
+  summarise (source_prod_tot = sum (source_prod, na.rm = T), source_lab_tot= sum (source_lab, na.rm = T), source_porphy_tot= sum (source_prophy, na.rm = T) ) %>% 
+  filter ( source_prod_tot == 0  ) %>% 
+  ungroup () 
+
+print("data integrated")
+trial_merged <- data_merge1 %>%  filter (source_prophy==1) 
+trial_merged  %>%  skim ()
+
+print("data not integrated")
+trial_merged1<- data_merge1 %>%  filter (is.na(source_prophy))
+trial_merged1  %>%  skim ()
+
+```
+

@@ -1,0 +1,1066 @@
+---
+title: "Data preparation and description before factor analysis"
+author: "Camille Delavenne"
+date: "2025-08-31"
+output: html_document
+---
+
+```{r setup, skimr_digits = 10, include=FALSE}
+library(bookdown)
+library(knitr)
+
+opts_chunk$set(echo = FALSE)
+opts_chunk$set(fig.width=12, fig.height=8, warning=FALSE, message=FALSE) 
+opts_chunk$set(tab.cap.style = "Table Caption")
+knit_hooks$set(inline = function(x) {prettyNum(x,big.mark=",")})
+
+```
+
+Preparation of the data to be used in factor analysis and description of the available data. For laboratory data, also describe the difference between the information with production and prophylaxis vs the remaining flock analysed. For the production performance, compare values to the production history. 
+
+
+#Production data preparation and description before the factor analysis
+
+## Screened and historical flocks
+
+### Preparation of the production data for the reported and screened flocks
+```{r}
+data_merge_matrix <- data_merge1 %>% filter (source_prod == 1) %>% 
+  dplyr::select (Id_chickenhouse, Birds.placement.date.min, Id_analysis, source_prophy)
+
+data_merge_matrix1 <- data_merge_matrix %>%  dplyr::select (-source_prophy)
+
+data_prod_history <- data_production2 %>% 
+  dplyr::select (Id_farm, Id_chickenhouse, Birds.placement.date.min, farm_type, NUTS3_2021, season,  Mortality.., Mean.body.weight,
+                 Mean.day.of.weighting, Condemnation.., FCR, EPEF, FPLS, Dead.in.transport.. ) %>% ungroup () %>% 
+  mutate (NUTS3_2021 = case_when(NUTS3_2021 == "PL619" ~ "PL6", 
+                            NUTS3_2021 == "PL622" ~ "PL6",
+                            NUTS3_2021 == "PL623" ~ "PL6",
+                            NUTS3_2021 == "PL811" ~ "PL8a",
+                            NUTS3_2021 == "PL814" ~ "PL8a",
+                            NUTS3_2021 == "PL815" ~ "PL8a",
+                            NUTS3_2021 == "PL842" ~ "PL8b",
+                            NUTS3_2021 == "PL922" ~ "PL9",
+                            NUTS3_2021 == "PL923" ~ "PL9",
+                            NUTS3_2021 == "PL924" ~ "PL9",
+                            NUTS3_2021 == "PL925" ~ "PL8b" ),
+          farm_type = case_when(farm_type== "1 ckhouse" | farm_type == "2 ckhouse" ~ "small",
+                               .default = "large")) %>% 
+  rename (Id_chickenhouse = Id_chickenhouse, 
+          Birds.placement.date.min = Birds.placement.date.min, 
+          farmtype = farm_type, 
+          NUTS3 =NUTS3_2021, 
+          season = season,
+          Mortality = Mortality.. ,
+          Condemnation =  Condemnation.. ,
+          MeanWeightAtSlaughter = Mean.body.weight,
+          MeanAgeAtSlaughter = Mean.day.of.weighting, 
+          FCR = FCR, 
+          FPLS= FPLS,
+          DOA = Dead.in.transport..)%>% 
+  left_join (data_merge_matrix, by = c("Id_chickenhouse", "Birds.placement.date.min")) %>% 
+  ungroup () %>%  mutate (id= row_number(),
+                          historical = case_when(!is.na(Id_analysis) & source_prophy == 1 ~  "No",
+                                                 .default = "Yes"))
+
+data_prod <- data_prod_history %>% 
+  filter (historical == "No") %>% 
+  dplyr::select(-source_prophy, -id, -historical) 
+
+```
+
+
+### Description of the production performance of the screened flocks 
+
+#### General data description - Table 1 (a)
+
+```{r}
+
+data_prod_history %>% 
+  dplyr::select (EPEF, Mortality , DOA,  Condemnation,  MeanWeightAtSlaughter, MeanAgeAtSlaughter,  FCR , FPLS) %>% 
+  pivot_longer(cols = everything(), names_to = c("Variable"), values_to = c("Value")) %>%
+  group_by(Variable) %>% 
+  summarise ( Mean = mean (Value, na.rm =T), 
+              SD = sd(Value, na.rm =T), 
+              Median = median (Value, na.rm =T), 
+              Min = min (Value, na.rm =T), 
+              Max = max (Value, na.rm =T), 
+              Complete = sum (is.na(Value))) %>% 
+  kable()
+
+```
+
+#### General data description - only screened flocks - Table 1 (b)
+
+```{r}
+
+data_prod_history %>% 
+  filter (historical == "No") %>% 
+  dplyr::select (EPEF, Mortality , DOA,  Condemnation,  MeanWeightAtSlaughter, MeanAgeAtSlaughter,  FCR , FPLS) %>% 
+  pivot_longer(cols = everything(), names_to = c("Variable"), values_to = c("Value")) %>%
+  group_by(Variable) %>% 
+  summarise ( Mean = mean (Value, na.rm =T), 
+              SD = sd(Value, na.rm =T), 
+              Median = median (Value, na.rm =T), 
+              Min = min (Value, na.rm =T), 
+              Max = max (Value, na.rm =T), 
+              Complete = sum (is.na(Value))) %>% 
+  kable()
+
+```
+
+
+#### Nested description of the reported flocks (farm, chicken house, flock)
+```{r}
+
+description_sample_ck <- data_prod_history %>%  group_by (Id_farm,  Id_chickenhouse) %>% summarise (n_production_per_chickenhouse=n()) %>% ungroup () %>% group_by(Id_farm) %>% mutate (n_ckhouse_per_farm = length(unique (Id_chickenhouse))) %>% mutate (n_ckhouse_per_farm = case_when (n_ckhouse_per_farm == 24 ~ 12, .default = n_ckhouse_per_farm)) #Correction due to a special case where a chicken house was demutiplied (one instance of 24 chicken houses)
+
+description_sample_f <- data_prod %>%  group_by (Id_farm) %>% summarise (n_production_per_farm=n()) %>% ungroup () 
+
+description_sample_ck %>% dplyr::select (n_production_per_chickenhouse, n_ckhouse_per_farm) %>% summary () 
+description_sample_f %>% dplyr::select (n_production_per_farm)  %>% summary () 
+
+#Descritption of the quantitative variable depending on the start day production (and compare with historical data? )
+
+dateh <- data_prod_history %>% mutate (ym = format((Birds.placement.date.min), "%Y-%m")) %>% dplyr::select (ym, Id_analysis)
+print ( dateh %>%  ggplot () + 
+   aes (x = ym (ym)) +
+   geom_bar (color = "cadetblue", fill= "cadetblue") +
+   scale_x_date(date_breaks = "2 month", date_labels = "%b-%y", expand = c(0,0)) +
+   xlab ("Month start of prodcution") +
+   ylab ("Number of flock") +
+   theme_minimal())
+
+```
+
+#### Nested description of the screened flocks (farm, chicken house, flock)
+```{r}
+
+description_sample_ck <- data_prod %>%  group_by (Id_farm,  Id_chickenhouse) %>% summarise (n_production_per_chickenhouse=n()) %>% ungroup () %>% group_by(Id_farm) %>% mutate (n_ckhouse_per_farm = length(unique (Id_chickenhouse))) %>% mutate (n_ckhouse_per_farm = case_when (n_ckhouse_per_farm == 24 ~ 12, .default = n_ckhouse_per_farm)) %>% ungroup () #Correction due to a special case where a chicken house was demutiplied (one instance of 24 chicken houses)
+
+description_sample_f <- data_prod %>%  group_by (Id_farm) %>% summarise (n_production_per_farm=n()) %>% ungroup () 
+
+description_sample_ck %>% dplyr::select (n_production_per_chickenhouse, n_ckhouse_per_farm) %>% summary () 
+description_sample_f %>% dplyr::select (n_production_per_farm)  %>% summary () 
+
+
+#Description of the quantitative variable depending on the start day production (and compare with historical data? )
+date <- data_prod %>% 
+  mutate (ym = format((Birds.placement.date.min), "%Y-%m")) %>% 
+  dplyr::select (ym, Id_analysis)
+
+print ( date %>%  ggplot () + 
+   aes (x = ym (ym)) +
+   geom_bar (color = "cadetblue", fill= "cadetblue") +
+   scale_x_date(date_breaks = "2 month", date_labels = "%b-%y", expand = c(0,0)) +
+   xlab ("Month start of prodcution") +
+   ylab ("Number of flock") +
+   theme_minimal())
+
+```
+
+
+## Comparing screened and reported flocks
+
+### General comparison 
+```{r, echo=FALSE}
+
+#Proportion of all qualitative variable per number of flocks (+ compare with historical data?)
+print ("historical vs sample")
+prop_prodh_h <- cbind (table (data_prod_history$historical)) %>% as.data.frame()
+colnames(prop_prodh_h)[1] <- "nflock"
+prop_prodh_h <- prop_prodh_h %>%  
+  mutate (propflock = nflock/length(unique (data_prod_history$id))*100) %>% 
+  arrange (desc(propflock)) 
+prop_prodh_h  %>% kable ()
+
+print ("Comparing variance and mean between historical and sampled tests")
+print ("1. Using t.test (assumption variance are equals")
+
+t.test (MeanWeightAtSlaughter ~ historical, data = data_prod_history , var.equal = TRUE)
+t.test (MeanAgeAtSlaughter ~ historical, data = data_prod_history, var.equal = TRUE)
+t.test (FCR ~ historical, data = data_prod_history, var.equal = TRUE)
+t.test (Condemnation ~ historical, data = data_prod_history, var.equal = TRUE)
+t.test (Mortality ~ historical, data = data_prod_history, var.equal = TRUE)
+t.test (FPLS ~ historical, data = data_prod_history, var.equal = TRUE)
+t.test (DOA ~ historical, data = data_prod_history, var.equal = TRUE)
+t.test (EPEF ~ historical, data = data_prod_history, var.equal = TRUE)
+
+
+print ("2. Using welsh's T.test ( no assumption that variance are equals)")#
+t.test (MeanWeightAtSlaughter ~ historical, data = data_prod_history , var.equal = FALSE)
+t.test (MeanAgeAtSlaughter ~ historical, data = data_prod_history, var.equal = FALSE)
+t.test (FCR ~ historical, data = data_prod_history, var.equal = FALSE)
+t.test (Condemnation ~ historical, data = data_prod_history, var.equal = FALSE)
+t.test (Mortality ~ historical, data = data_prod_history, var.equal = FALSE)
+t.test (FPLS ~ historical, data = data_prod_history, var.equal = FALSE)
+t.test (DOA ~ historical, data = data_prod_history, var.equal = FALSE)
+t.test (EPEF ~ historical, data = data_prod_history, var.equal = FALSE)
+
+print ("2. Perform an F test to compare the variance of two samples from normal population)")
+
+var.test (MeanWeightAtSlaughter ~ historical, data = data_prod_history )
+var.test (MeanAgeAtSlaughter ~ historical, data = data_prod_history)
+var.test (FCR ~ historical, data = data_prod_history)
+var.test (Condemnation ~ historical, data = data_prod_history)
+var.test (Mortality ~ historical, data = data_prod_history)
+var.test (FPLS ~ historical, data = data_prod_history)
+var.test (DOA ~ historical, data = data_prod_history)
+var.test (EPEF ~ historical, data = data_prod_history)
+```
+
+
+### Correlation matrices - Figure 2 paper 
+```{r, echo=FALSE}
+print("Spearman full- in the paper Figure 2A")
+data_prod_history[, c( "EPEF", "FCR",  "MeanAgeAtSlaughter", "MeanWeightAtSlaughter", "Mortality", "Condemnation", "DOA",   "FPLS", "historical" )] %>% 
+  rename ("Mean weight at slaughter" = MeanWeightAtSlaughter,
+          "Mean age at slaughter" = MeanAgeAtSlaughter) %>% 
+  ggcorr( method = c("pairwise","spearman"), label = TRUE, label_round = 3, hjust = 0.85, size = 5,   label_alpha = TRUE, nbreaks = 5,label_size = 4)
+
+print("Spearman non-screened - not in the paper")
+data_prod_history[data_prod_history$historical== "Yes", c( "EPEF", "FCR",  "MeanAgeAtSlaughter", "MeanWeightAtSlaughter", "Mortality", "Condemnation", "DOA",   "FPLS", "historical" )] %>% 
+  rename ("Mean weight at slaughter" = MeanWeightAtSlaughter,
+          "Mean age at slaughter" = MeanAgeAtSlaughter) %>% 
+  ggcorr( method = c("pairwise","spearman"), label = TRUE, label_round = 3, hjust = 0.85, size = 5,   label_alpha = TRUE, nbreaks = 5,label_size = 4)
+
+print("Spearman screened - in the paper Figure 2B")
+data_prod_history[data_prod_history$historical== "No", c( "EPEF", "FCR",  "MeanAgeAtSlaughter", "MeanWeightAtSlaughter", "Mortality", "Condemnation", "DOA",   "FPLS", "historical" )] %>% 
+  rename ("Mean weight at slaughter" = MeanWeightAtSlaughter,
+          "Mean age at slaughter" = MeanAgeAtSlaughter) %>% 
+  ggcorr( method = c("pairwise","spearman"), label = TRUE, label_round = 3, hjust = 0.85, size = 5,   label_alpha = TRUE, nbreaks = 5,label_size = 4)
+
+```
+
+## Outlier
+```{r, echo=FALSE}
+data_prod_outlier <- data_prod %>% 
+  filter(Mortality > 40)
+
+paste0 ("Number of outlier flock with mortality above 40%: ", dim( data_prod_outlier)[1])
+
+print("Spearman screened without 1ST oulier - not in the paper")
+data_prod_history[data_prod_history$historical== "No"& data_prod_history$Mortality < 40, c( "EPEF", "FCR",  "MeanAgeAtSlaughter", "MeanWeightAtSlaughter", "Mortality", "Condemnation", "DOA",   "FPLS", "historical" )] %>% 
+  rename ("Mean weight at slaughter" = MeanWeightAtSlaughter,
+          "Mean age at slaughter" = MeanAgeAtSlaughter) %>% 
+  ggcorr( method = c("pairwise","spearman"), label = TRUE, label_round = 3, hjust = 0.85, size = 5,   label_alpha = TRUE, nbreaks = 5,label_size = 4)
+```
+
+
+# Prophylaxis data
+
+## Preparation and description of the data prophylaxis data
+
+### Define if ATB was used during production or not 
+```{r, echo=FALSE}
+data_merge_matrix_prophy <- data_merge_matrix %>% filter (source_prophy == 1) %>% 
+  dplyr::select (Id_chickenhouse, Birds.placement.date.min)
+
+#ATB simplified
+data_ATB_matrix_simplified <- Prophylaxis_analysis  %>% 
+  mutate (ATB_uncleaned = case_when (Inputtype == "ATB" ~ Input,
+                                     TRUE ~ "No ATB"),
+          Inputdate1 = case_when (ATB_uncleaned == "No ATB" ~ NA,
+                                  .default = Inputdate1 ),
+          Inputdate2 = case_when (ATB_uncleaned == "No ATB" ~ NA,
+                                  .default = Inputdate2 )) %>% 
+  dplyr::select(Id_farm, Id_chickenhouse, Id_production, Start.production, Input, ATB_uncleaned, Inputdate1, Inputdate2)%>% 
+  left_join (reference_ATB, by = c(  "ATB_uncleaned"= "Input" )) %>%   
+  ungroup () %>%
+  mutate (start_days = Inputdate1, 
+          end_days = Inputdate2) %>% 
+  dplyr::select(Id_farm, Id_chickenhouse, Id_production,Start.production, Active.substances, 
+                ATB_uncleaned,  start_days, end_days) %>%
+  unique () %>% 
+  group_by (Id_farm, Id_chickenhouse, Id_production, Start.production) %>% 
+  mutate (n= row_number (),
+          ATB = case_when(ATB_uncleaned  == "No ATB" & n ==1 ~ 0,
+                          TRUE ~ 1  )) %>% 
+  ungroup () %>% 
+  mutate (ATB_firstweek = case_when (as.numeric(start_days) < 8 ~ 1,
+                                     TRUE ~ 0),
+          ATB_free = case_when (as.numeric(start_days) < 22 ~ 1,
+                                     TRUE ~ 0)) %>%  
+  dplyr::select (-ATB_uncleaned) %>%  
+  filter (! (is.na (Active.substances) & ATB == 1 )) %>% 
+  dplyr::select (-n) %>%  unique ()  %>% 
+  rename (Birds.placement.date.min = Start.production) %>% 
+  mutate (Birds.placement.date.min = as.Date(Birds.placement.date.min, "%d.%m.%Y"))%>% 
+  ungroup () %>%  # equivalent to data_ATB from previous file 
+  
+  dplyr::select (Id_chickenhouse, Birds.placement.date.min, Active.substances, ATB, ATB_firstweek, ATB_free) %>% 
+  mutate (ATB = case_when (ATB == 1 & ATB_firstweek == 1 ~ 0, 
+                           .default = ATB )) %>% 
+  mutate (Active.substances = str_replace_all (str_squish(Active.substances), "[^[:alnum:]]", "")) %>% 
+  group_by(Id_chickenhouse, Birds.placement.date.min) %>% 
+  summarise (ATBrestprod= sum (ATB),ATBfirstweek = sum (ATB_firstweek),ATBpfree = sum (ATB_free)) %>% 
+  ungroup () %>% 
+  full_join (data_merge_matrix_prophy, by = c( "Id_chickenhouse", "Birds.placement.date.min")) %>% 
+  group_by(Id_chickenhouse, Birds.placement.date.min) %>%
+  mutate (ATBrestprod = case_when (ATBrestprod == 0 ~ "N",
+                                   ATBrestprod > 0 ~ "Y",
+                                   .default= "N"),
+          ATBfirstweek = case_when(ATBfirstweek == 0 ~ "N",
+                                   ATBfirstweek > 0 ~ "Y",
+                                   .default= "N"),
+          ATBuse = case_when (ATBrestprod == "N" & ATBfirstweek == "N" ~ "N",
+                                   .default= "Y"))
+
+```
+
+```{r, echo=FALSE}
+data_ATB_matrix_simplified %>% ungroup () %>% dplyr::select (ATBuse) %>%  table()
+```
+
+### Vaccination program - results presenetd in the text along table 7
+
+```{r, echo=FALSE}
+Vaccin_sero <-Prophylaxis_analysis  %>% group_by(Id_chickenhouse, Start.production) %>%  filter (inputtype == "Vaccin") %>% 
+  ungroup () %>% 
+  dplyr::select(Id_chickenhouse, Start.production, Input,Inputdetail, Inputdate1) %>%  
+  left_join (reference_Vaccin, by = c("Input", "Inputdetail"))%>%  
+  dplyr::select (-Input, -Inputdetail,  -Strains, -Brand) %>% 
+  pivot_longer( cols = c (Corrected.Input, Corrected.Input2, Corrected.Input3), names_to= "NB", values_to = "Input", values_drop_na = TRUE) %>% 
+  filter (Input !="") %>% 
+  dplyr::select (-NB) %>% 
+  pivot_longer( cols = c (Strain_prog1, Strain_prog), names_to= "NB", values_to = "Strain_sero", values_drop_na = TRUE) %>% 
+  filter (Strain_sero!="") %>% 
+  dplyr::select (Id_chickenhouse, Start.production,  Input, Strain_sero, Vaccine.name) %>% 
+  unique () %>% 
+  mutate (Strain_sero = case_when (Input == "IBD" & Strain_sero!="Vector" ~ "Live", # following discussion with the integrator that no flocks were not vaccinated with IBD
+                               .default = Strain_sero),
+          Vaccination = "Yes") %>% 
+  unique () %>% 
+  filter (! (Input %in% c ("ND", "MD", "REO"))) %>% arrange(Input) %>% 
+  mutate( IBD_MB = case_when ( Vaccine.name == "Tabic M.B." | Vaccine.name == "Phivax BD-1" ~ 1,
+                               .default = 0)) %>% 
+  group_by(Id_chickenhouse ,Start.production) %>% 
+  mutate (IBD_MB = sum (IBD_MB)) %>% 
+  ungroup () %>% 
+  mutate (Input = as.character(Input), 
+          Strain_sero = as.character(Strain_sero)) %>% 
+  dplyr::select (-Vaccine.name) %>% 
+  distinct () %>% 
+  pivot_wider(names_from = c(Input, Strain_sero), names_sep = "_", values_from = Vaccination, values_fill = "No") %>% 
+  mutate (TRT_none = case_when (TRT_A == "No" & TRT_B == "No" ~ "Yes",
+                               .default = "No"),
+          TRT_AB = case_when (TRT_A == "Yes" & TRT_B == "Yes" ~ "Yes",
+                               .default = "No")) %>% 
+  mutate (TRT_A = case_when (TRT_AB == "Yes"  ~ "No",
+                               .default = TRT_A),
+          TRT_B = case_when (TRT_AB == "Yes"  ~ "No",
+                               .default = TRT_B),
+          IBD_Live = case_when (IBD_Vector == "Yes"  ~ "No",
+                               .default = IBD_Vector)) %>%
+  rename (Birds.placement.date.min = Start.production) 
+
+
+Vaccin_sero <- data_merge_matrix_prophy %>% left_join(Vaccin_sero, by = c("Id_chickenhouse", "Birds.placement.date.min")) %>% 
+  mutate (IBD_Live = case_when (IBD_Live == "No" & IBD_Vector == "No" ~ "Yes", 
+                                .default = IBD_Live)) # private communication with integrator but no details on the vaccine used and when 
+
+
+
+```
+
+
+```{r, echo=FALSE}
+tot <- dim (data_prod) [1]
+
+print ("Vaccination strains")
+print ("Individual strains for IB")
+print ("IB_D274")
+prop_Vaccin_sero_IB_D274<- cbind (table (Vaccin_sero$IB_D274)) %>% as.data.frame()
+colnames(prop_Vaccin_sero_IB_D274)[1] <- "nflock"
+prop_Vaccin_sero_IB_D274 %>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+print ("IB_MASS")
+prop_Vaccin_sero_IB_MASS<- cbind (table (Vaccin_sero$IB_MASS)) %>% as.data.frame()
+colnames(prop_Vaccin_sero_IB_MASS)[1] <- "nflock"
+prop_Vaccin_sero_IB_MASS %>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+print ("IB_QX")
+prop_Vaccin_sero_IB_QX<- cbind (table (Vaccin_sero$IB_QX)) %>% as.data.frame()
+colnames(prop_Vaccin_sero_IB_QX)[1] <- "nflock"
+prop_Vaccin_sero_IB_QX%>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+print ("IB_793B")
+prop_Vaccin_sero_IB_793B<- cbind (table (Vaccin_sero$IB_793B)) %>% as.data.frame()
+colnames(prop_Vaccin_sero_IB_793B)[1] <- "nflock"
+prop_Vaccin_sero_IB_793B%>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+
+print ("IB_VAR2")
+prop_Vaccin_sero_IB_VAR2<- cbind (table (Vaccin_sero$IB_VAR2)) %>% as.data.frame()
+colnames(prop_Vaccin_sero_IB_VAR2)[1] <- "nflock"
+prop_Vaccin_sero_IB_VAR2%>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+#cleaning up PCR results to regroup results geenrally
+Vaccin_sero_prop <- Vaccin_sero %>% 
+  mutate (IB_D274 = case_when( IB_D274 == "Yes" ~ "D74",
+                               .default = ""),
+          IB_MASS = case_when( IB_MASS == "Yes" ~ "MASS",
+                               .default = ""),
+          IB_QX = case_when( IB_QX == "Yes" ~ "QX",
+                               .default = ""),
+          IB_793B = case_when( IB_793B == "Yes" ~ "793B",
+                               .default = ""),
+          IB_VAR2 = case_when( IB_VAR2 =="Yes" ~ "VAR2",
+                               .default = ""),
+          IBD_Live = case_when( IBD_Live == "Yes" & IBD_Vector == "No" ~ "Live",
+                               .default = ""),
+          IBD_Vector = case_when( IBD_Vector == "Yes" ~ "Vector",
+                               .default = ""),
+          TRT_B = case_when( TRT_B == "Yes" ~ "B",
+                               .default = ""),
+          TRT_A = case_when( TRT_A == "Yes" ~ "A",
+                               .default = ""),
+          TRT_AB = case_when( TRT_AB == "Yes" ~ "A and B",
+                               .default = ""),
+          TRT_none = case_when( TRT_none == "Yes" ~ "No vaccination",
+                               .default = "")) %>% 
+  mutate (IB = str_c(IB_D274, IB_MASS,IB_QX ,  IB_793B, IB_VAR2, sep= ""),
+          IBD = str_c(IBD_Live, IBD_Vector, sep= ""),
+          TRT = str_c(TRT_A, TRT_B,TRT_AB , TRT_none, sep= ""))
+
+
+          
+print ("IB, all vaccine combination found in the data")
+prop_Vaccin_sero_IB <- cbind (table (Vaccin_sero_prop$IB)) %>% as.data.frame()
+colnames(prop_Vaccin_sero_IB)[1] <- "nflock"
+prop_Vaccin_sero_IB %>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+print ("IBD")
+prop_Vaccin_sero_IBD <- cbind (table (Vaccin_sero_prop$IBD)) %>% as.data.frame()
+colnames(prop_Vaccin_sero_IBD)[1] <- "nflock"
+prop_Vaccin_sero_IBD %>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+print ("TRT")
+prop_Vaccin_sero_TRT<- cbind (table (Vaccin_sero_prop$TRT)) %>% as.data.frame()
+colnames(prop_Vaccin_sero_TRT)[1] <- "nflock"
+prop_Vaccin_sero_TRT %>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+```
+
+
+# Laboratory data
+
+Data presented by variable types
+
+```{r, echo=FALSE}
+#Identifying the flock with prophyalxis but without lab data
+data_merge_lab_list<-  data_merge1%>% 
+  filter (source_prod == 1 & source_prophy == 1) %>%  
+  dplyr::select (Id_analysis)
+
+```
+
+## Necropsy lesions
+
+### Table 4
+
+```{r, echo=FALSE}
+### Preparing variables
+
+prod_data_lesion <- Laboratory_analysis %>% 
+  filter (Lab_test_category == "Necropsy")  %>% 
+  right_join(Lesion_cleaned2, by = c("Sample_definition" , "Result_qualitative" )) %>% 
+  ungroup() %>% 
+  group_by (System, Lesion_type,  Id_analysis, Lesion_confidence) %>% 
+  summarise (tot = sum (as.numeric(Result_quantitative))) %>% ungroup () %>% 
+  mutate (tot = case_when (tot >0 ~ "Y",
+                           tot == 0 ~ "N")) 
+
+data_lesion <- prod_data_lesion %>% 
+  mutate (Lesion_type=  str_replace_all (str_squish (Lesion_type), "[^[:alnum:]]", ""),
+          System = str_replace_all (str_squish(System), "[^[:alnum:]]", "")) %>%
+  filter (tot == "Y" & Lesion_confidence != 'No') %>% 
+  ungroup () %>% 
+  dplyr::select (-Lesion_confidence) %>% 
+  unique () %>% 
+  pivot_wider(names_from = c(System, Lesion_type), names_sep = "", values_from = tot ,values_fill = "N") %>% ungroup () 
+
+```
+
+```{r, echo=FALSE}
+
+print ("Main lesion categories")  
+  prod_data_lesion %>% 
+  right_join(data_merge_lab_list, by = "Id_analysis") %>%
+  filter (tot == "Y" & Lesion_confidence != 'No') %>% 
+  group_by(System, Lesion_type, Lesion_confidence) %>% 
+  summarise (nflocks = length (unique (Id_analysis)) ) %>% 
+  mutate (propflocks = nflocks/tot*100) %>% 
+  arrange(desc(nflocks)) %>% 
+  kable()
+  
+```
+
+## Bacteria status
+
+### Table 5 
+
+```{r, echo=FALSE}
+
+### Preparing variables 
+
+internal <- c ("Heart", "Liver", "Spleen", "Bone.marrow", "pooled.liver.(n=5)") #defining internal organs for escherichia coli
+
+prod_data_bacterio_simplified <- Laboratory_analysis %>% 
+  filter (Lab_test_category == "Bacteriology" & Test_type == "Identification") %>% 
+  filter (Microorganism_identification != "Corynebacterium amycolatum") %>% 
+  filter (Microorganism_identification != "Paeniclostridium sordellii") %>% 
+  mutate (Microorganism_identification = case_when (str_starts( Microorganism_identification, "Staphylococcus") ~ "Staphylococcus spp",
+                                                     str_starts( Microorganism_identification, "Staphylococcus") ~ "Staphylococcus spp",
+    str_starts( Microorganism_identification, "Escherichia c") & (as.character (Sample_definition) %in% internal) & as.numeric(as.character(Result_qualitative)) > 1 ~ "Escherichia coli internal",
+    str_starts( Microorganism_identification, "Escherichia c") & (as.numeric(as.character(Result_qualitative)) == 1 | (!(as.character(Sample_definition) %in% internal) & as.numeric(as.character(Result_qualitative)) > 1))  ~ "Escherichia coli external",
+    #str_starts( Microorganism_identification, "Clostridium p") & (as.numeric(as.character(Result_quantitative)) > 1) ~ "Clostridium perfringens",
+    #str_starts( Microorganism_identification, "Clostridium p") & (as.numeric(as.character(Result_quantitative)) == 1) ~ "Clostridium perfringens one",
+    str_starts( Microorganism_identification, "Clostridium p") & (as.character (Sample_definition) %in% internal) ~ "Clostridium perfringens",
+    str_starts( Microorganism_identification, "Clostridium p") & (as.character (Sample_definition) == "Duodenum") ~ "Clostridium perfringens one",
+                                                    .default = Microorganism_identification)) %>% 
+  filter (Microorganism_identification != "Clostridium perfringens one") %>% 
+  group_by(Microorganism_identification,  Id_analysis) %>% 
+    summarise (tot = sum (as.numeric(Result_quantitative))) %>% ungroup () %>% 
+  mutate (tot = case_when(tot>0 ~ "Y",
+                          .default = "N")) 
+
+data_bacterio_simplified <- prod_data_bacterio_simplified%>% 
+  mutate (Microorganism_identification =  str_replace_all (str_squish (Microorganism_identification), "[^[:alnum:]]", "")) %>% 
+  pivot_wider(names_from = c( Microorganism_identification ), names_sep = "", values_from = tot ,values_fill = "N") %>% ungroup ()%>% 
+  right_join(data_merge_lab_list, by = "Id_analysis") %>% 
+  dplyr::select ( -Corynebacteriumfreneyi, - Escherichiafergusonii, -Klebsiellaoxytoca, -Lactobacillusjohnsonii,  -Streptococcuspluranimalium) #Removing bacteria that are not in the 115 flock with historical production information
+
+```
+
+
+```{r, echo=FALSE}
+print ("Main Bacteria")  
+prod_data_bacterio_simplified  %>% 
+  right_join(data_merge_lab_list, by = "Id_analysis") %>%
+  filter (tot == "Y") %>% 
+  filter (Microorganism_identification != "Escherichia coli external") %>% 
+  group_by(Microorganism_identification) %>% 
+  summarise (nflocks = length (unique (Id_analysis)) ) %>% 
+  mutate (propflocks = nflocks/tot*100) %>% 
+  arrange(desc(nflocks)) %>% 
+  kable()
+```
+
+## Eimeria status
+
+### Table 6
+
+```{r, echo=FALSE}
+### Preparing variables 
+
+
+para_base <- Laboratory_analysis %>% filter (Lab_test_category == "Parasitology" )  %>%   
+    dplyr::select (Id_farm, Id_chickenhouse, Id_analysis, animal_id, Sample_definition, Result_qualitative) %>% 
+    mutate (Result_qualitative = as.character (Result_qualitative)) %>% 
+    ungroup () %>% 
+    group_by(Id_analysis, Sample_definition) %>%
+    mutate(Eimeria_analysis = case_when (sum (as.numeric(Result_qualitative)) >0 & sum (as.numeric(Result_qualitative)) <4 ~ "Low",
+                                         sum (as.numeric(Result_qualitative)) >3  ~ "High",
+                                         .default = "No")) %>% 
+    ungroup () 
+
+para_eimeria <-para_base %>%   
+    dplyr::select (Id_analysis, Sample_definition,Eimeria_analysis ) %>% 
+    group_by(Id_analysis, Sample_definition) %>% 
+    summarise(Eimeria_analysis = unique (Eimeria_analysis )) %>% 
+    pivot_wider(names_from = Sample_definition,  values_from = Eimeria_analysis )  %>% 
+    right_join (data_merge_lab_list, by = c("Id_analysis"))
+
+para_infestation <-para_base%>%   
+    dplyr::select (Id_analysis, animal_id, Result_qualitative, Sample_definition) %>% 
+    group_by (Id_analysis, animal_id) %>% 
+    summarise (MAX_Infestation = max (as.numeric(as.character(Result_qualitative)))) %>% 
+    ungroup () %>% 
+    group_by (Id_analysis, MAX_Infestation) %>% 
+    summarise (tot_bird = n_distinct(animal_id)) %>% 
+    pivot_wider(names_from = MAX_Infestation,  values_from = tot_bird, values_fill = 0 ) %>% 
+    mutate (Infestation= case_when ( (`1`) ==0 & (`2`) == 0 & (`3`)==0  ~ "No",
+                                           (`0`) < 5 &  (`1`) <3 & (`2`) == 0 & (`3`) == 0 ~ "Low",
+                                           (`0`) < 5 & ((`3`) > 0 | (`2`) > 2)  ~ "High",
+                                      .default = "Moderate" )) 
+
+data_para <- para_eimeria %>% full_join(para_infestation , by = "Id_analysis") # also in the "cleaned analysis part
+
+data_para_simplified <- data_para %>%  
+  rename ("Duodenum" =  "Duodenum",
+          "MeckelDiverticulum" =  "Jejunum",
+          "Cecum" =  "Ileum",
+          "Rectum" =  "Cecum") %>% #renamed following mistranslation in the data after exchanges with the laboratory
+  dplyr::select (-`0`, -`1`, -`2`, -`3`, -Infestation )
+
+
+
+```
+
+
+```{r, echo=FALSE}
+print ("Para tot")
+data_para_simplified %>%  
+  pivot_longer (cols= 2:5, names_to = "IntestinedDivision", values_to= "InfestationScores") %>% 
+  group_by(IntestinedDivision, InfestationScores) %>% 
+  summarise (n= length (unique (Id_analysis)),
+             prop= n/tot*100) %>% 
+  kable ()
+
+```
+
+
+## Virus circulation status
+### Preparing variables 
+#### PCR results
+```{r, echo=FALSE}
+data_pcr <- Laboratory_analysis %>% 
+  filter (Lab_test_category == "Virology" & Test_type =="PCR") %>% 
+  dplyr::select (Lab_test, Specific_strain ,Result_qualitative, Id_analysis) %>% 
+  ungroup( ) %>%
+  mutate (Specific_strain = as.character (Specific_strain), Result_qualitative = as.character (Result_qualitative)) %>% 
+  mutate (Specific_strain = case_when (Specific_strain == "IB181" ~ "IB80", # Correction following mistranslation by the laboratory
+                                          .default = Specific_strain)) %>% 
+  pivot_wider(names_from = c(Lab_test, Specific_strain), names_sep = "", values_from = Result_qualitative, values_fill = NA)%>% 
+  right_join (data_merge_lab_list, by = c("Id_analysis"))
+
+```
+
+#### Serology results 
+```{r, echo=FALSE}
+data_sero <- Laboratory_analysis %>% 
+  filter (Lab_test_category == "Virology" & Test_type =="ELISA") %>%
+  group_by ( Lab_test, Id_analysis) %>%  
+  filter (!is.na (Result_quantitative)) %>%
+  summarise(ELISA_gmean = exp(mean(log(as.numeric(Result_quantitative)))),
+            ELISA_gsd = exp(sd(log(as.numeric(Result_quantitative)))))%>% 
+  pivot_wider(names_from = Lab_test, names_prefix = "sero", values_from = c(ELISA_gmean, ELISA_gsd), values_fill = NA) %>% 
+  left_join(reference_Sero, by = "Id_analysis")%>% 
+  right_join (data_merge_lab_list, by = c("Id_analysis"))
+
+```
+
+#### Virus circulation based on serology results, pcr results, vaccination and test type (Idexx or biocheck) as defined in supplementary material 3. For IB the thereshold used are named 'IB1' and not 'IB'
+```{r, echo=FALSE}
+
+Virus_circulation <- data_prod %>% 
+  dplyr::select (Id_chickenhouse, Birds.placement.date.min, Id_analysis) %>% 
+  left_join(Vaccin_sero, by = c("Id_chickenhouse", "Birds.placement.date.min")) %>% 
+  left_join (data_sero, by = c("Id_analysis")) %>% 
+  left_join (data_pcr, by = c("Id_analysis")) %>% 
+  mutate (circulation_IB1_MASS = case_when(sero_test == "Idexx" & IB_MASS == "No" & ELISA_gmean_seroIB < 2000 & IBMASS == "NEG" ~ "No",
+                                         sero_test == "Idexx" & IB_MASS == "No" & ELISA_gmean_seroIB < 2000 & IBMASS == "POS" ~ "Yes",
+                                         sero_test == "Idexx" & IB_MASS == "No" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IBMASS == "NEG" ~ "SUS",
+                                         sero_test == "Idexx" & IB_MASS == "No" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IBMASS == "POS" ~ "Yes",
+                                         sero_test == "Idexx" & IB_MASS == "No" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IBMASS == "NEG" ~ "HSUS",
+                                         sero_test == "Idexx" & IB_MASS == "No" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IBMASS == "POS" ~ "Yes",
+                                         
+                                         sero_test == "Idexx" & IB_MASS == "Yes" & ELISA_gmean_seroIB < 2000  ~ "No",
+                                         sero_test == "Idexx" & IB_MASS == "Yes" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000)  ~ "No",
+                                         sero_test == "Idexx" & IB_MASS == "Yes" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000)  ~ "HSUS",
+                                         
+                                         
+                                         sero_test == "Biochek" & IB_MASS == "No" & ELISA_gmean_seroIB < 4000 & IBMASS == "NEG" ~ "No",
+                                         sero_test == "Biochek" & IB_MASS == "No" & ELISA_gmean_seroIB < 4000 & IBMASS == "POS" ~ "Yes",
+                                         sero_test == "Biochek" & IB_MASS == "No" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000) & IBMASS == "NEG" ~ "SUS",
+                                         sero_test == "Biochek" & IB_MASS == "No" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000) & IBMASS == "POS" ~ "Yes",
+                                         sero_test == "Biochek" & IB_MASS == "No" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IBMASS == "NEG" ~ "HSUS",
+                                         sero_test == "Biochek" & IB_MASS == "No" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IBMASS == "POS" ~ "Yes",
+                                         
+                                         sero_test == "Biochek" & IB_MASS == "Yes" & ELISA_gmean_seroIB < 4000  ~ "No",
+                                         sero_test == "Biochek" & IB_MASS == "Yes" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000)  ~ "No",
+                                         sero_test == "Biochek" & IB_MASS == "Yes" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) ~ "HSUS",
+                                         .default= "Error"),
+          
+          
+          circulation_IB1_793B = case_when(sero_test == "Idexx" & IB_793B == "No" & ELISA_gmean_seroIB < 2000 & IB793B == "NEG" ~ "No",
+                                         sero_test == "Idexx" & IB_793B == "No" & ELISA_gmean_seroIB < 2000 & IB793B == "POS" ~ "Yes",
+                                         sero_test == "Idexx" & IB_793B == "No" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IB793B == "NEG" ~ "SUS",
+                                         sero_test == "Idexx" & IB_793B == "No" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IB793B == "POS" ~ "Yes",
+                                         sero_test == "Idexx" & IB_793B == "No" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IB793B == "NEG" ~ "HSUS",
+                                         sero_test == "Idexx" & IB_793B == "No" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IB793B == "POS" ~ "Yes",
+                                         
+                                         sero_test == "Idexx" & IB_793B == "Yes" & ELISA_gmean_seroIB < 2000  ~ "No",
+                                         sero_test == "Idexx" & IB_793B == "Yes" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000)  ~ "No",
+                                         sero_test == "Idexx" & IB_793B == "Yes" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) ~ "HSUS",
+                                         
+                                         
+                                         sero_test == "Biochek" & IB_793B == "No" & ELISA_gmean_seroIB < 4000 & IB793B == "NEG" ~ "No",
+                                         sero_test == "Biochek" & IB_793B == "No" & ELISA_gmean_seroIB < 4000 & IB793B == "POS" ~ "Yes",
+                                         sero_test == "Biochek" & IB_793B == "No" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000) & IB793B == "NEG" ~ "SUS",
+                                         sero_test == "Biochek" & IB_793B == "No" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000) & IB793B == "POS" ~ "Yes",
+                                         sero_test == "Biochek" & IB_793B == "No" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IB793B == "NEG" ~ "HSUS",
+                                         sero_test == "Biochek" & IB_793B == "No" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IB793B == "POS" ~ "Yes",
+                                         
+                                         sero_test == "Biochek" & IB_793B == "Yes" & ELISA_gmean_seroIB < 4000  ~ "No",
+                                         sero_test == "Biochek" & IB_793B == "Yes" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000)  ~ "No",
+                                         sero_test == "Biochek" & IB_793B == "Yes" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000)  ~ "HSUS",
+                                         .default= "Error"),
+          
+          
+          circulation_IB1_QX = case_when(sero_test == "Idexx" & IB_QX == "No" & ELISA_gmean_seroIB < 2000 & IBQX == "NEG" ~ "No",
+                                       sero_test == "Idexx" & IB_QX == "No" & ELISA_gmean_seroIB < 2000 & IBQX == "POS" ~ "Yes",
+                                       sero_test == "Idexx" & IB_QX == "No" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IBQX == "NEG" ~ "SUS",
+                                       sero_test == "Idexx" & IB_QX == "No" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IBQX == "POS" ~ "Yes",
+                                       sero_test == "Idexx" & IB_QX == "No" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IBQX == "NEG" ~ "HSUS",
+                                       sero_test == "Idexx" & IB_QX == "No" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IBQX == "POS" ~ "Yes",
+                                         
+                                       
+                                       sero_test == "Idexx" & IB_QX == "Yes" & ELISA_gmean_seroIB < 2000  ~ "No",
+                                       sero_test == "Idexx" & IB_QX == "Yes" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000)  ~ "No",
+                                       sero_test == "Idexx" & IB_QX == "Yes" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) ~ "HSUS",
+                                         
+                                       
+                                       sero_test == "Biochek" & IB_QX == "No" & ELISA_gmean_seroIB < 4000 & IBQX == "NEG" ~ "No",
+                                       sero_test == "Biochek" & IB_QX == "No" & ELISA_gmean_seroIB < 4000 & IBQX == "POS" ~ "Yes",
+                                       sero_test == "Biochek" & IB_QX == "No" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000) & IBQX == "NEG" ~ "SUS",
+                                       sero_test == "Biochek" & IB_QX == "No" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000) & IBQX == "POS" ~ "Yes",
+                                       sero_test == "Biochek" & IB_QX == "No" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IBQX == "NEG" ~ "HSUS",
+                                       sero_test == "Biochek" & IB_QX == "No" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IBQX == "POS" ~ "Yes",
+                                         
+                                       sero_test == "Biochek" & IB_QX == "Yes" & ELISA_gmean_seroIB < 4000  ~ "No",
+                                       sero_test == "Biochek" & IB_QX == "Yes" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000)  ~ "No",
+                                       sero_test == "Biochek" & IB_QX == "Yes" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000)  ~ "HSUS",
+                                       .default= "Error"),
+        
+        
+        circulation_IB1_VAR2 = case_when(sero_test == "Idexx" & IB_VAR2 == "No" & ELISA_gmean_seroIB < 2000 & IBVAR2 == "NEG" ~ "No",
+                                       sero_test == "Idexx" & IB_VAR2 == "No" & ELISA_gmean_seroIB < 2000 & IBVAR2 == "POS" ~ "Yes",
+                                       sero_test == "Idexx" & IB_VAR2 == "No" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IBVAR2 == "NEG" ~ "SUS",
+                                       sero_test == "Idexx" & IB_VAR2 == "No" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IBVAR2 == "POS" ~ "Yes",
+                                       sero_test == "Idexx" & IB_VAR2 == "No" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IBVAR2 == "NEG" ~ "HSUS",
+                                       sero_test == "Idexx" & IB_VAR2 == "No" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IBVAR2 == "POS" ~ "Yes",
+                                       
+                                       sero_test == "Idexx" & IB_VAR2 == "Yes" & ELISA_gmean_seroIB < 2000  ~ "No",
+                                       sero_test == "Idexx" & IB_VAR2 == "Yes" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000)  ~ "No",
+                                       sero_test == "Idexx" & IB_VAR2 == "Yes" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000)  ~ "HSUS",
+                                         
+                                       
+                                       sero_test == "Biochek" & IB_VAR2 == "No" & ELISA_gmean_seroIB < 4000 & IBVAR2 == "NEG" ~ "No",
+                                       sero_test == "Biochek" & IB_VAR2 == "No" & ELISA_gmean_seroIB < 4000 & IBVAR2 == "POS" ~ "Yes",
+                                       sero_test == "Biochek" & IB_VAR2 == "No" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000) & IBVAR2 == "NEG" ~ "SUS",
+                                       sero_test == "Biochek" & IB_VAR2 == "No" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000) & IBVAR2 == "POS" ~ "Yes",
+                                       sero_test == "Biochek" & IB_VAR2 == "No" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IBVAR2 == "NEG" ~ "HSUS",
+                                       sero_test == "Biochek" & IB_VAR2 == "No" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IBVAR2 == "POS" ~ "Yes",
+                                         
+                                       sero_test == "Biochek" & IB_VAR2 == "Yes" & ELISA_gmean_seroIB < 4000  ~ "No",
+                                       sero_test == "Biochek" & IB_VAR2 == "Yes" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000)  ~ "No",
+                                       sero_test == "Biochek" & IB_VAR2 == "Yes" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000)  ~ "HSUS",
+                                       .default= "Error"),
+        
+        
+        circulation_IB1_D274 = case_when(sero_test == "Idexx" & IB_D274 == "No" & ELISA_gmean_seroIB < 2000 & IBD274 == "NEG" ~ "No",
+                                       sero_test == "Idexx" & IB_D274 == "No" & ELISA_gmean_seroIB < 2000 & IBD274 == "POS" ~ "Yes",
+                                       sero_test == "Idexx" & IB_D274 == "No" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IBD274 == "NEG" ~ "SUS",
+                                       sero_test == "Idexx" & IB_D274 == "No" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IBD274 == "POS" ~ "Yes",
+                                       sero_test == "Idexx" & IB_D274 == "No" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IBD274 == "NEG" ~ "HSUS",
+                                       sero_test == "Idexx" & IB_D274 == "No" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IBD274 == "POS" ~ "Yes",
+                                       
+                                       sero_test == "Idexx" & IB_D274 == "Yes" & ELISA_gmean_seroIB < 2000  ~ "No",
+                                       sero_test == "Idexx" & IB_D274 == "Yes" & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000)  ~ "No",
+                                       sero_test == "Idexx" & IB_D274 == "Yes" &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000)  ~ "HSUS",
+                                         
+                                        
+                                       sero_test == "Biochek" & IB_D274 == "No" & ELISA_gmean_seroIB < 4000 & IBD274 == "NEG" ~ "No",
+                                       sero_test == "Biochek" & IB_D274 == "No" & ELISA_gmean_seroIB < 4000 & IBD274 == "POS" ~ "Yes",
+                                       sero_test == "Biochek" & IB_D274 == "No" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 4000) & IBD274 == "NEG" ~ "SUS",
+                                       sero_test == "Biochek" & IB_D274 == "No" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 4000) & IBD274 == "POS" ~ "Yes",
+                                       sero_test == "Biochek" & IB_D274 == "No" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IBD274 == "NEG" ~ "HSUS",
+                                       sero_test == "Biochek" & IB_D274 == "No" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IBD274 == "POS" ~ "Yes",
+                                         
+                                       sero_test == "Biochek" & IB_D274 == "Yes" & ELISA_gmean_seroIB < 4000  ~ "No",
+                                       sero_test == "Biochek" & IB_D274 == "Yes" & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000)  ~ "No",
+                                       sero_test == "Biochek" & IB_D274 == "Yes" &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000)  ~ "HSUS",
+                                       .default= "Error"),
+        
+        
+        circulation_IB1_IB80 = case_when(sero_test == "Idexx"  & ELISA_gmean_seroIB < 2000 & IBIB80 == "NEG" ~ "No",
+                                       sero_test == "Idexx"  & ELISA_gmean_seroIB < 2000 & IBIB80 == "POS" ~ "Yes",
+                                       sero_test == "Idexx"  & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IBIB80 == "NEG" ~ "SUS",
+                                       sero_test == "Idexx"  & ELISA_gmean_seroIB < 3000 & (ELISA_gmean_seroIB > 2000|ELISA_gmean_seroIB == 2000) & IBIB80 == "POS" ~ "Yes",
+                                       sero_test == "Idexx"  &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IBIB80 == "NEG" ~ "HSUS",
+                                       sero_test == "Idexx"  &  (ELISA_gmean_seroIB > 3000|ELISA_gmean_seroIB == 3000) & IBIB80 == "POS" ~ "Yes",
+                                         
+                                    
+                                         
+                                       
+                                       sero_test == "Biochek"  & ELISA_gmean_seroIB < 4000 & IBIB80 == "NEG" ~ "No",
+                                       sero_test == "Biochek"  & ELISA_gmean_seroIB < 4000 & IBIB80 == "POS" ~ "Yes",
+                                       sero_test == "Biochek"  & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000) & IBIB80 == "NEG" ~ "SUS",
+                                       sero_test == "Biochek"  & ELISA_gmean_seroIB < 6000 & (ELISA_gmean_seroIB > 4000|ELISA_gmean_seroIB == 4000) & IBIB80 == "POS" ~ "Yes",
+                                       sero_test == "Biochek"  &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IBIB80 == "NEG" ~ "HSUS",
+                                       sero_test == "Biochek"  &  (ELISA_gmean_seroIB > 6000|ELISA_gmean_seroIB == 6000) & IBIB80 == "POS" ~ "Yes",
+                                         
+                                       
+                                       .default= "Error"), 
+        
+        circulation_IBD = case_when(sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB == 0 & ELISA_gmean_seroIBD < 4000 & IBDVV == "NEG" & IBDNV == "NEG" ~ "No",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB == 0 & ELISA_gmean_seroIBD < 4000 & IBDVV == "POS" & IBDNV == "NEG" ~ "Yes",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB == 0 & ELISA_gmean_seroIBD < 4000 & IBDVV == "NEG" & IBDNV == "POS" ~ "No",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB == 0 & ELISA_gmean_seroIBD < 4000 & IBDVV == "POS" & IBDNV == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB == 0 & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "NEG" & IBDNV == "NEG" ~ "SUS",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB == 0 & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "POS" & IBDNV == "NEG" ~ "Yes",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB == 0 & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "NEG" & IBDNV == "POS" ~ "SUS",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB == 0 & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "POS" & IBDNV == "POS" ~ "Yes",
+                                   
+                                   
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB > 0  & ELISA_gmean_seroIBD < 4000 & IBDVV == "NEG" & IBDNV == "NEG" ~ "No",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB > 0  & ELISA_gmean_seroIBD < 4000 & IBDVV == "POS" & IBDNV == "NEG" ~ "No",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB > 0  & ELISA_gmean_seroIBD < 4000 & IBDVV == "NEG" & IBDNV == "POS" ~ "No",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB > 0  & ELISA_gmean_seroIBD < 4000 & IBDVV == "POS" & IBDNV == "POS" ~ "No",
+                                   
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB > 0  & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "NEG" & IBDNV == "NEG" ~ "SUS",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB > 0  & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "POS" & IBDNV == "NEG" ~ "SUS",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB > 0  & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "NEG" & IBDNV == "POS" ~ "SUS",
+                                   sero_test == "Idexx" & IBD_Vector == "No" & IBD_MB > 0  & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "POS" & IBDNV == "POS" ~ "SUS",
+                                   
+                                   
+                                   sero_test == "Idexx" & IBD_Vector == "Yes" & ELISA_gmean_seroIBD < 2000 & IBDVV == "NEG" & IBDNV == "NEG" ~ "No",
+                                   sero_test == "Idexx" & IBD_Vector == "Yes" & ELISA_gmean_seroIBD < 2000 & IBDVV == "POS" & IBDNV == "NEG" ~ "Yes",
+                                   sero_test == "Idexx" & IBD_Vector == "Yes" & ELISA_gmean_seroIBD < 2000 & IBDVV == "NEG" & IBDNV == "POS" ~ "No",
+                                   sero_test == "Idexx" & IBD_Vector == "Yes" & ELISA_gmean_seroIBD < 2000 & IBDVV == "POS" & IBDNV == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Idexx" & IBD_Vector == "Yes" & (ELISA_gmean_seroIBD > 2000|ELISA_gmean_seroIBD==2000) & IBDVV == "NEG" & IBDNV == "NEG" ~ "SUS",
+                                   sero_test == "Idexx" & IBD_Vector == "Yes" & (ELISA_gmean_seroIBD > 2000|ELISA_gmean_seroIBD==2000) & IBDVV == "POS" & IBDNV == "NEG" ~ "Yes",
+                                   sero_test == "Idexx" & IBD_Vector == "Yes" & (ELISA_gmean_seroIBD > 2000|ELISA_gmean_seroIBD==2000) & IBDVV == "NEG" & IBDNV == "POS" ~ "SUS",
+                                   sero_test == "Idexx" & IBD_Vector == "Yes" & (ELISA_gmean_seroIBD > 2000|ELISA_gmean_seroIBD==2000) & IBDVV == "POS" & IBDNV == "POS" ~ "Yes",
+                                   
+                                   
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB == 0 & ELISA_gmean_seroIBD < 12000 & IBDVV == "NEG" & IBDNV == "NEG" ~ "No",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB == 0 & ELISA_gmean_seroIBD < 12000 & IBDVV == "POS" & IBDNV == "NEG" ~ "Yes",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB == 0 & ELISA_gmean_seroIBD < 12000 & IBDVV == "NEG" & IBDNV == "POS" ~ "No",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB == 0 & ELISA_gmean_seroIBD < 12000 & IBDVV == "POS" & IBDNV == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB == 0 & (ELISA_gmean_seroIBD > 12000|ELISA_gmean_seroIBD==12000) & IBDVV == "NEG" & IBDNV == "NEG" ~ "SUS",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB == 0 & (ELISA_gmean_seroIBD > 12000|ELISA_gmean_seroIBD==12000) & IBDVV == "POS" & IBDNV == "NEG" ~ "Yes",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB == 0 & (ELISA_gmean_seroIBD > 12000|ELISA_gmean_seroIBD==12000) & IBDVV == "NEG" & IBDNV == "POS" ~ "SUS",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB == 0 & (ELISA_gmean_seroIBD > 12000|ELISA_gmean_seroIBD==12000) & IBDVV == "POS" & IBDNV == "POS" ~ "Yes",
+                                   
+                                   
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB > 0 & ELISA_gmean_seroIBD < 12000 & IBDVV == "NEG" & IBDNV == "NEG" ~ "No",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB > 0  & ELISA_gmean_seroIBD < 12000 & IBDVV == "POS" & IBDNV == "NEG" ~ "No",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB > 0  & ELISA_gmean_seroIBD < 12000 & IBDVV == "NEG" & IBDNV == "POS" ~ "No",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB > 0  & ELISA_gmean_seroIBD < 12000 & IBDVV == "POS" & IBDNV == "POS" ~ "No",
+                                   
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB > 0  & (ELISA_gmean_seroIBD > 12000|ELISA_gmean_seroIBD==12000) & IBDVV == "NEG" & IBDNV == "NEG" ~ "SUS",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB > 0  & (ELISA_gmean_seroIBD > 12000|ELISA_gmean_seroIBD==12000) & IBDVV == "POS" & IBDNV == "NEG" ~ "SUS",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB > 0  & (ELISA_gmean_seroIBD > 12000|ELISA_gmean_seroIBD==12000) & IBDVV == "NEG" & IBDNV == "POS" ~ "SUS",
+                                   sero_test == "Biochek" & IBD_Vector == "No" & IBD_MB > 0  & (ELISA_gmean_seroIBD > 12000|ELISA_gmean_seroIBD==12000) & IBDVV == "POS" & IBDNV == "POS" ~ "SUS",
+                          
+                                   sero_test == "Biochek" & IBD_Vector == "Yes" & ELISA_gmean_seroIBD < 4000 & IBDVV == "NEG" & IBDNV == "NEG" ~ "No",
+                                   sero_test == "Biochek" & IBD_Vector == "Yes" & ELISA_gmean_seroIBD < 4000 & IBDVV == "POS" & IBDNV == "NEG" ~ "Yes",
+                                   sero_test == "Biochek" & IBD_Vector == "Yes" & ELISA_gmean_seroIBD < 4000 & IBDVV == "NEG" & IBDNV == "POS" ~ "No",
+                                   sero_test == "Biochek" & IBD_Vector == "Yes" & ELISA_gmean_seroIBD < 4000 & IBDVV == "POS" & IBDNV == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Biochek" & IBD_Vector == "Yes" & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "NEG" & IBDNV == "NEG" ~ "SUS",
+                                   sero_test == "Biochek" & IBD_Vector == "Yes" & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "POS" & IBDNV == "NEG" ~ "Yes",
+                                   sero_test == "Biochek" & IBD_Vector == "Yes" & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "NEG" & IBDNV == "POS" ~ "SUS",
+                                   sero_test == "Biochek" & IBD_Vector == "Yes" & (ELISA_gmean_seroIBD > 4000|ELISA_gmean_seroIBD==4000) & IBDVV == "POS" & IBDNV == "POS" ~ "Yes",
+                                 .default= "Error"), 
+        
+        
+        circulation_TRT = case_when(sero_test == "Idexx" & TRT_none == "Yes" & ELISA_gmean_seroTRT < 200 & TRTA == "NEG" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Idexx" & TRT_none == "Yes" & ELISA_gmean_seroTRT < 200 & TRTA == "POS" & TRTB == "NEG" ~ "Yes",
+                                   sero_test == "Idexx" & TRT_none == "Yes" & ELISA_gmean_seroTRT < 200 & TRTA == "NEG" & TRTB == "POS" ~ "Yes",
+                                   sero_test == "Idexx" & TRT_none == "Yes" & ELISA_gmean_seroTRT < 200 & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Idexx" & TRT_none == "Yes" & (ELISA_gmean_seroTRT >200|ELISA_gmean_seroTRT==200) & TRTA == "NEG" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Idexx" & TRT_none == "Yes" & (ELISA_gmean_seroTRT >200|ELISA_gmean_seroTRT==200) & TRTA == "POS" & TRTB == "NEG" ~ "Yes",
+                                   sero_test == "Idexx" & TRT_none == "Yes" & (ELISA_gmean_seroTRT >200|ELISA_gmean_seroTRT==200) & TRTA == "NEG" & TRTB == "POS" ~ "Yes",
+                                   sero_test == "Idexx" & TRT_none == "Yes" & (ELISA_gmean_seroTRT >200|ELISA_gmean_seroTRT==200) & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Idexx" & TRT_A == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "NEG" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Idexx" & TRT_A == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "POS" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Idexx" & TRT_A == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "NEG" & TRTB == "POS" ~ "Yes",
+                                   sero_test == "Idexx" & TRT_A == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Idexx" & TRT_A == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "NEG" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Idexx" & TRT_A == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "POS" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Idexx" & TRT_A == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "NEG" & TRTB == "POS" ~ "Yes",
+                                   sero_test == "Idexx" & TRT_A == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Idexx" & TRT_B == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "NEG" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Idexx" & TRT_B == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "POS" & TRTB == "NEG" ~ "Yes",
+                                   sero_test == "Idexx" & TRT_B == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "NEG" & TRTB == "POS" ~ "No",
+                                   sero_test == "Idexx" & TRT_B == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Idexx" & TRT_B == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "NEG" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Idexx" & TRT_B == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "POS" & TRTB == "NEG" ~ "Yes",
+                                   sero_test == "Idexx" & TRT_B == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "NEG" & TRTB == "POS" ~ "SUS",
+                                   sero_test == "Idexx" & TRT_B == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Idexx" & TRT_AB == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "NEG" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Idexx" & TRT_AB == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "POS" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Idexx" & TRT_AB == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "NEG" & TRTB == "POS" ~ "No",
+                                   sero_test == "Idexx" & TRT_AB == "Yes" & ELISA_gmean_seroTRT < 2000 & TRTA == "POS" & TRTB == "POS" ~ "No",
+                                   
+                                   sero_test == "Idexx" & TRT_AB == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "NEG" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Idexx" & TRT_AB == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "POS" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Idexx" & TRT_AB == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "NEG" & TRTB == "POS" ~ "SUS",
+                                   sero_test == "Idexx" & TRT_AB == "Yes" & (ELISA_gmean_seroTRT >2000|ELISA_gmean_seroTRT==2000) & TRTA == "POS" & TRTB == "POS" ~ "SUS",
+                                   
+                                   sero_test == "Biochek" & TRT_none == "Yes" & ELISA_gmean_seroTRT < 350 & TRTA == "NEG" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Biochek" & TRT_none == "Yes" & ELISA_gmean_seroTRT < 350 & TRTA == "POS" & TRTB == "NEG" ~ "Yes",
+                                   sero_test == "Biochek" & TRT_none == "Yes" & ELISA_gmean_seroTRT < 350 & TRTA == "NEG" & TRTB == "POS" ~ "Yes",
+                                   sero_test == "Biochek" & TRT_none == "Yes" & ELISA_gmean_seroTRT < 350 & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Biochek" & TRT_none == "Yes" & (ELISA_gmean_seroTRT >350|ELISA_gmean_seroTRT==350) & TRTA == "NEG" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Biochek" & TRT_none == "Yes" & (ELISA_gmean_seroTRT >350|ELISA_gmean_seroTRT==350) & TRTA == "POS" & TRTB == "NEG" ~ "Yes",
+                                   sero_test == "Biochek" & TRT_none == "Yes" & (ELISA_gmean_seroTRT >350|ELISA_gmean_seroTRT==350) & TRTA == "NEG" & TRTB == "POS" ~ "Yes",
+                                   sero_test == "Biochek" & TRT_none == "Yes" & (ELISA_gmean_seroTRT >350|ELISA_gmean_seroTRT==350) & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Biochek" & TRT_A == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "NEG" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Biochek" & TRT_A == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "POS" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Biochek" & TRT_A == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "NEG" & TRTB == "POS" ~ "Yes",
+                                   sero_test == "Biochek" & TRT_A == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Biochek" & TRT_A == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "NEG" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Biochek" & TRT_A == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "POS" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Biochek" & TRT_A == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "NEG" & TRTB == "POS" ~ "Yes",
+                                   sero_test == "Biochek" & TRT_A == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Biochek" & TRT_B == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "NEG" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Biochek" & TRT_B == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "POS" & TRTB == "NEG" ~ "Yes",
+                                   sero_test == "Biochek" & TRT_B == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "NEG" & TRTB == "POS" ~ "No",
+                                   sero_test == "Biochek" & TRT_B == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Biochek" & TRT_B == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "NEG" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Biochek" & TRT_B == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "POS" & TRTB == "NEG" ~ "Yes",
+                                   sero_test == "Biochek" & TRT_B == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "NEG" & TRTB == "POS" ~ "SUS",
+                                   sero_test == "Biochek" & TRT_B == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "POS" & TRTB == "POS" ~ "Yes",
+                                   
+                                   sero_test == "Biochek" & TRT_AB == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "NEG" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Biochek" & TRT_AB == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "POS" & TRTB == "NEG" ~ "No",
+                                   sero_test == "Biochek" & TRT_AB == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "NEG" & TRTB == "POS" ~ "No",
+                                   sero_test == "Biochek" & TRT_AB == "Yes" & ELISA_gmean_seroTRT < 4000 & TRTA == "POS" & TRTB == "POS" ~ "No",
+                                   
+                                   sero_test == "Biochek" & TRT_AB == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "NEG" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Biochek" & TRT_AB == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "POS" & TRTB == "NEG" ~ "SUS",
+                                   sero_test == "Biochek" & TRT_AB == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "NEG" & TRTB == "POS" ~ "SUS",
+                                   sero_test == "Biochek" & TRT_AB == "Yes" & (ELISA_gmean_seroTRT >4000|ELISA_gmean_seroTRT==4000) & TRTA == "POS" & TRTB == "POS" ~ "SUS",
+                                   .default= "Error")) 
+
+
+
+
+Virus_circulation <- Virus_circulation %>% 
+  mutate (
+    
+    circulation_IB1 = case_when (circulation_IB1_MASS == "Yes" | circulation_IB1_793B == "Yes" | circulation_IB1_QX== "Yes" | circulation_IB1_VAR2== "Yes" | circulation_IB1_D274== "Yes" | circulation_IB1_IB80 == "Yes" ~ "Yes",
+                                 circulation_IB1_MASS == "No" & circulation_IB1_793B == "No" & circulation_IB1_QX== "No" & circulation_IB1_VAR2== "No" & circulation_IB1_D274== "No" & circulation_IB1_IB80 == "No" ~ "No",
+                                 circulation_IB1_MASS == "HSUS" | circulation_IB1_793B == "HSUS" | circulation_IB1_QX== "HSUS" | circulation_IB1_VAR2== "HSUS" | circulation_IB1_D274== "HSUS" | circulation_IB1_IB80 == "HSUS" & ! (circulation_IB1_MASS == "Yes" | circulation_IB1_793B == "Yes" | circulation_IB1_QX== "Yes" | circulation_IB1_VAR2== "Yes" | circulation_IB1_D274== "Yes" | circulation_IB1_IB80 == "Yes")~ "HSUS",
+                                 .default = "SUS"))
+
+
+Virus_circulation_simple <- Virus_circulation %>%  
+  dplyr::select (Id_chickenhouse, Birds.placement.date.min, Id_analysis,circulation_IBD,circulation_TRT,circulation_IB1, circulation_IB1_MASS, circulation_IB1_793B, circulation_IB1_QX, circulation_IB1_VAR2, circulation_IB1_D274, circulation_IB1_IB80)
+
+```
+
+### Variable description 
+
+#### Summary of the results - Table 7
+```{r, echo=FALSE}
+print ("field IBDV in flocks")
+prop_field_IBD<- cbind (table (Virus_circulation_simple$circulation_IBD)) %>% as.data.frame()
+colnames(prop_field_IBD)[1] <- "nflock"
+prop_field_IBD %>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+print ("field IBV in flocks")
+prop_field_IB<- cbind (table (Virus_circulation_simple$circulation_IB1)) %>% as.data.frame()
+colnames(prop_field_IB)[1] <- "nflock"
+prop_field_IB %>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+
+print ("field aMPV in flocks")
+prop_field_TRT<- cbind (table (Virus_circulation_simple$circulation_TRT)) %>% as.data.frame()
+colnames(prop_field_TRT)[1] <- "nflock"
+prop_field_TRT %>%  
+  mutate (propflock = nflock/tot*100)%>% 
+  arrange (desc(propflock)) %>% 
+  kable ()
+
+print ("field IB in flocks - detials of genotype")
+Virus_circulation %>% 
+  ungroup () %>% filter (circulation_IB1 =='Yes')%>%
+  mutate (circulation_IB1_MASS = case_when(circulation_IB1_MASS != "Yes" ~ "No",
+                                          .default = circulation_IB1_MASS ),
+          circulation_IB1_793B = case_when(circulation_IB1_793B != "Yes" ~ "No",
+                                          .default = circulation_IB1_793B ),
+          circulation_IB1_QX = case_when(circulation_IB1_QX != "Yes" ~ "No",
+                                          .default = circulation_IB1_QX ),
+          circulation_IB1_VAR2 = case_when(circulation_IB1_VAR2 != "Yes" ~ "No",
+                                          .default = circulation_IB1_VAR2 ),
+          circulation_IB1_D274 = case_when(circulation_IB1_D274 != "Yes" ~ "No",
+                                          .default = circulation_IB1_D274),
+          circulation_IB1_IB80 = case_when(circulation_IB1_IB80 != "Yes" ~ "No",
+                                          .default = circulation_IB1_IB80))  %>% 
+  count (circulation_IB1_MASS, circulation_IB1_793B, circulation_IB1_QX, circulation_IB1_VAR2, circulation_IB1_D274, circulation_IB1_IB80 )%>%
+  mutate(prop = prop.table(n)) %>% 
+  kable ()
+
+
+```
+
+
+### END - Joining all information and last clean up
+```{r, echo=FALSE}
+
+data_prod_prophy <-  data_prod %>% 
+  left_join(data_ATB_matrix_simplified, by = c("Id_chickenhouse", "Birds.placement.date.min")) 
+
+data_prod_prophy_lab <- data_prod_prophy %>% left_join(data_lesion, by = c("Id_analysis"))  
+data_prod_prophy_lab1 <- data_prod_prophy_lab %>% left_join(data_bacterio_simplified , by = c("Id_analysis")) 
+data_prod_prophy_lab2 <- data_prod_prophy_lab1 %>% left_join(data_para_simplified, by = c("Id_analysis"))
+data_prod_prophy_lab3 <- data_prod_prophy_lab2 %>% left_join(Virus_circulation_simple, by = c("Id_chickenhouse", "Birds.placement.date.min", "Id_analysis")) 
+
+
+```
+
+```{r, skimr_digits = 4, echo=FALSE}
+
+data_full <- data_prod_prophy_lab3  %>% 
+  mutate (Id = str_replace_all (str_squish(Id_analysis), "[^[:alnum:]]", ""),
+          Id_chickenhouse = str_squish(Id_chickenhouse),
+          farmtype = as.character (farmtype)) %>% 
+  mutate (farmtype = str_replace_all (str_squish(farmtype), "[^[:alnum:]]", ""))
+
+rownames(data_full) <- data_full$Id
+
+data_full <- data_full %>% 
+  dplyr::select (-Birds.placement.date.min ,-Id, -Id_analysis) %>% 
+  ungroup ()
+
+```

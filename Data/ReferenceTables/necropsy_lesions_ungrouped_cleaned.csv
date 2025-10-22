@@ -1,0 +1,115 @@
+Sample_definition,Result_qualitative,Renamed,System,Organ,Lesion_type,Lesion_type,Lesion_pathologic,Lesion_confidence
+Bursa of Fabricius,ENLARGED,ENLARGED,Bursa of Fabricius,Bursa of Fabricius,Change in composition,,Yes,Yes
+Heart,CLOUDY PERICARDIAL SAC,CLOUDY PERICARDIAL SAC,Cardio-vascular,Pericardium,Change in composition,,Yes,Low
+Heart,HYPEREMIA,HYPEREMIA,Cardio-vascular,Heart (as a whole),Vascular congestion,,Count,No
+Stomach,ENLARGEMENT OF PROVENTRICULUS,ENLARGEMENT OF PROVENTRICULUS,Gastrointestinal,Proventricul,Change in composition,,Yes,Low
+Kidneys,ENLARGED,ENLARGED,Kidney and ureters,Kidney,Change in composition,,Yes,Yes
+Liver,ENLARGED,ENLARGED,Liver,Liver,Change in composition,,Yes,Yes
+Liver,FRAGILE,FRAGILE,Liver,Liver,Change in composition,,Yes,Yes
+Air sacs,CLOUDY AIR SACS,CLOUDY AIR SACS,Respiratory,Air sacs,Change in composition,,Yes,Low
+Spleen,ENLARGED,ENLARGED,Spleen,Spleen,Change in composition,,Yes,Yes
+Spleen,MARBLED,MARBLED,Spleen,Spleen,Change in composition,,Yes,Yes
+Another,CYST WITH CLEAR FLUID  IN CELOMIC CAVITY,CYST WITH CLEAR FLUID  IN CELOMIC CAVITY,Celomic cavity,Celomic cavity,Cyst,,Yes,Yes
+Stomach,EMPTY CROP ,EMPTY CROP ,Gastrointestinal,Crop,Empty or abnormal content,,No,Yes
+Stomach,EMPTY STOMACH,EMPTY STOMACH,Gastrointestinal,Stomach,Empty or abnormal content,,No,Yes
+Stomach,FEATHERS IN THE STOMACH,FEATHERS IN THE STOMACH,Gastrointestinal,Stomach,Empty or abnormal content,,Yes,Yes
+Stomach,LITTER IN THE STOMACH,LITTER IN THE STOMACH,Gastrointestinal,Stomach,Empty or abnormal content,,Yes,Yes
+Heart,FIBRINOUS PERICARDITIS,FIBRINOUS PERICARDITIS,Cardio-vascular,Pericardium,Fibrin,,Yes,Yes
+Intestines,CAECA BALLOONED WITH GAS,CAECA BALLOONED WITH GAS,Gastrointestinal,Caeca,Gas,,No,No
+Intestines,CAECA OVERFILLED WITH FLUID CONTAINING MANY GAS BUBBLES,CAECA OVERFILLED WITH FLUID CONTAINING MANY GAS BUBBLES,Gastrointestinal,Caeca,Gas,,No,No
+Intestines,GASIFIED CONTENTS IN THE CAECA,GASIFIED CONTENTS IN THE CAECA,Gastrointestinal,Caeca,Gas,,No,No
+Intestines,HEMORRHAGES IN CECAL MUCOSA,HEMORRHAGES IN CECAL MUCOSA,Gastrointestinal,Caeca,Hemorrhage,,Yes,No
+Intestines,ECCHYMOSIS IN CECAL MUCOSA,ECCHYMOSIS IN CECAL MUCOSA,Gastrointestinal,Caeca,Vascular congestion,,Count,No
+Intestines,HYPEREMIA OF CECAL MUCOSA,HYPEREMIA OF CECAL MUCOSA,Gastrointestinal,Caeca,Vascular congestion,,Count,No
+Intestines,THINNING OF THE CECAL WALLS,THINNING OF THE CECAL WALLS,Gastrointestinal,Caeca,"Thining, distended",,Yes,No
+Intestines,GASIFIED CONTENT OF THE DUODENUM,GASIFIED CONTENT OF THE DUODENUM,Gastrointestinal,Duodenum,Gas,,No,No
+Intestines,GASIFIED CONTENTS IN  DUDENAL,GASIFIED CONTENTS IN  DUDENAL,Gastrointestinal,Duodenum,Gas,,No,No
+Intestines,GASIFIED CONTENTS IN DUDENAL,GASIFIED CONTENTS IN DUDENAL,Gastrointestinal,Duodenum,Gas,,No,No
+Intestines,GASIFIED CONTENTS IN THE DUODENUM,GASIFIED CONTENTS IN THE DUODENUM,Gastrointestinal,Duodenum,Gas,,No,No
+Intestines,HEMORRHAGES IN DUODENAL MUCOSA,HEMORRHAGES IN DUODENAL MUCOSA,Gastrointestinal,Duodenum,Hemorrhage,,Yes,No
+Intestines,ECCHYMOSIS IN DUODENAL MUCOSA,ECCHYMOSIS IN DUODENAL MUCOSA,Gastrointestinal,Duodenum,Vascular congestion,,Count,No
+Intestines,HYPEREMIA OF DUODENAL MUCOSA,HYPEREMIA OF DUODENAL MUCOSA,Gastrointestinal,Duodenum,Vascular congestion,,Count,No
+Intestines,PETECHIAE IN DUODENAL MUCOSA,PETECHIAE IN DUODENAL MUCOSA,Gastrointestinal,Duodenum,Vascular congestion,,Count,No
+Intestines,NECROTIC ENTERITIS,NECROTIZING DUODENITIS,Gastrointestinal,Duodenum,Necrosis - ulcer,,Yes,No
+Intestines,NECROTIZING DUODENITIS,NECROTIZING DUODENITIS,Gastrointestinal,Duodenum,Necrosis - ulcer,,Yes,No
+Intestines,THINNING OF THE DUODENAL WALLS,THINNING OF THE DUODENAL WALLS,Gastrointestinal,Duodenum,"Thining, distended",,Yes,No
+Stomach,ECCHYMOSIS  IN GIZZARD MUCOSA,ECCHYMOSIS  IN GIZZARD MUCOSA,Gastrointestinal,Gizzard,Vascular congestion,,Count,No
+Stomach,DISINTEGRATED OF KOILIN LAYER OF GIZZARD,DISINTEGRATED OF KOILIN LAYER OF GIZZARD,Gastrointestinal,Gizzard,Necrosis - ulcer,,Yes,No
+Stomach,EROSIONS OF KOILIN LAYER OF GIZZARD,EROSIONS OF KOILIN LAYER OF GIZZARD,Gastrointestinal,Gizzard,Necrosis - ulcer,,Yes,No
+Intestines,PALE,PALE,Gastrointestinal,Intestines (as a whole),Change in composition,,No,No
+Intestines,UNDIGESTED FOOD,UNDIGESTED FOOD,Gastrointestinal,Intestines (as a whole),Empty or abnormal content,,No,No
+Intestines,UNDIGESTED FOOD IN INTESTINES,UNDIGESTED FOOD IN INTESTINES,Gastrointestinal,Intestines (as a whole),Empty or abnormal content,,No,No
+Another,PANCREATIC HYPEREMIA ,PANCREATIC HYPEREMIA ,Gastrointestinal,Pancreas,Vascular congestion,,Count,No
+Stomach,ECCHYMOSIS IN  PROVENTRICULUS,ECCHYMOSIS IN  PROVENTRICULUS,Gastrointestinal,Proventricul,Vascular congestion,,Count,No
+Stomach,ECCHYMOSIS IN PROVENTRICULAR MUCOSA,ECCHYMOSIS IN  PROVENTRICULUS,Gastrointestinal,Proventricul,Vascular congestion,,Count,No
+Stomach,DISTENDED PROVENTRICULUS,DISTENDED PROVENTRICULUS,Gastrointestinal,Proventricul,"Thining, distended",,Yes,No
+Stomach,FLACCIDED PROVENTRICULUS,DISTENDED PROVENTRICULUS,Gastrointestinal,Proventricul,"Thining, distended",,Yes,No
+Stomach,FLACCIDED; DISTENDED PROVENTRICULUS,DISTENDED PROVENTRICULUS,Gastrointestinal,Proventricul,"Thining, distended",,Yes,No
+Stomach,ECCHYMOSIS OF MUCOSAL JUNCTION BEETWEEN PROVENTRICULUS AND GIZZARD,ECCHYMOSIS OF MUCOSAL JUNCTION BEETWEEN PROVENTRICULUS AND GIZZARD,Gastrointestinal,Proventricul and Gizzar,Vascular congestion,,Count,No
+Intestines,BLOATED RECTAL FILLED WITH FECES,BLOATED RECTAL FILLED WITH FECES,Gastrointestinal,Rectum,Gas,,No,No
+Intestines,HEMORRHAGES IN RECTAL MUCOSA,HEMORRHAGES IN RECTAL MUCOSA,Gastrointestinal,Rectum,Hemorrhage,,Yes,No
+Intestines,ECCHYMOSIS IN RECTAL MUCOSA,ECCHYMOSIS IN RECTAL MUCOSA,Gastrointestinal,Rectum,Vascular congestion,,Count,No
+Intestines,HYPEREMIA OF RECTAL MUCOSA,HYPEREMIA OF RECTAL MUCOSA,Gastrointestinal,Rectum,Vascular congestion,,Count,No
+Intestines,DISTENDED RECTUM,DISTENDED RECTUM,Gastrointestinal,Rectum,"Thining, distended",,No,No
+Intestines,THINNING OF THE RECTAL WALLS,THINNING OF THE RECTAL WALLS,Gastrointestinal,Rectum,"Thining, distended",,Yes,No
+Intestines,GREENISH CONTENT OF SMALL INTESTINES,GREENISH CONTENT OF SMALL INTESTINES,Gastrointestinal,Small intestines,Empty or abnormal content,,Yes,No
+Intestines,RAREFIED CONTENTS OF SMALL INTESTINE,RAREFIED CONTENTS OF SMALL INTESTINE,Gastrointestinal,Small intestines,Empty or abnormal content,,Yes,No
+Intestines,REREFIED CONTENTS OF SMALL INTESTINE,REREFIED CONTENTS OF SMALL INTESTINE,Gastrointestinal,Small intestines,Empty or abnormal content,,Yes,No
+Intestines,UNDIGESTED FOOD IN SMALL INTESTINE,UNDIGESTED FOOD IN SMALL INTESTINE,Gastrointestinal,Small intestines,Empty or abnormal content,,No,No
+Intestines,WATERY CONTENTS OF SMALL INTESTINE,WATERY CONTENTS OF SMALL INTESTINE,Gastrointestinal,Small intestines,Empty or abnormal content,,Yes,No
+Intestines,GASIFIED CONTENTS IN THE SMALL INTESTINES,GASIFIED CONTENTS IN THE SMALL INTESTINES,Gastrointestinal,Small intestines,Gas,,No,No
+Intestines,SMALL INTESTINES BALLOONED WITH GAS,SMALL INTESTINES BALLOONED WITH GAS,Gastrointestinal,Small intestines,Gas,,No,No
+Intestines,HEMORRHAGES IN SMALL INTESTINAL MUCOSA,HEMORRHAGES IN SMALL INTESTINAL MUCOSA,Gastrointestinal,Small intestines,Hemorrhage,,Yes,No
+Intestines,ECCHYMOSIS IN SMALL INTESTINAL MUCOSA,ECCHYMOSIS IN SMALL INTESTINAL MUCOSA,Gastrointestinal,Small intestines,Vascular congestion,,Count,No
+Intestines,HYPEREMIA OF SMALL INTESTINAL MUCOSA,HYPEREMIA OF SMALL INTESTINAL MUCOSA,Gastrointestinal,Small intestines,Vascular congestion,,Count,No
+Intestines,PETECHIAE IN SMALL INTESTINAL MUCOSA,PETECHIAE IN SMALL INTESTINAL MUCOSA,Gastrointestinal,Small intestines,Vascular congestion,,Count,No
+Intestines,SEGMENTAL ECCHYMOSIS IN SMALL INTESTINAL MUCOSA,SEGMENTAL ECCHYMOSIS IN SMALL INTESTINAL MUCOSA,Gastrointestinal,Small intestines,Vascular congestion,,Count,No
+Intestines,SEGMENTAL HYPEREMIA OF SMALL INTESTINAL MUCOSA,SEGMENTAL HYPEREMIA OF SMALL INTESTINAL MUCOSA,Gastrointestinal,Small intestines,Vascular congestion,,Count,No
+Intestines,THINNING OF THE SMALL INTESTINAL WALLS,THINNING OF THE SMALL INTESTINAL WALLS,Gastrointestinal,Small intestines,"Thining, distended",,Yes,No
+Intestines,FIBRIN CONCREMENTS BEETWEEN INTESTINAL LOOPS ,FIBRIN CONCREMENTS BEETWEEN INTESTINAL LOOPS ,Celomic cavity,Celomic cavity,Fibrin,,Yes,Yes
+Another,FIBRIN CONCREMENTS IN CELOMIC CAVITY,FIBRIN CONCREMENTS IN CELOMIC CAVITY,Celomic cavity,Celomic cavity,Fibrin,,Yes,Yes
+Liver,FIBRINOUS PERIHEPATITIS,FIBRINOUS PERIHEPATITIS,Liver,Liver,Fibrin,,Yes,Yes
+Joints,FIBRIN IN JOINT CAVITY,FIBRIN IN JOINT CAVITY,Musculo-skeletal,Joints,Fibrin,,Yes,Yes
+Air sacs,FIBRINOUS AIR SACCULITIS,FIBRINOUS AIR SACCULITIS,Respiratory,Air sacs,Fibrin,,Yes,Yes
+Lungs,FIBRINOUS PNEUMONIA,FIBRINOUS PNEUMONIA,Respiratory,Lung,Fibrin,,Yes,Yes
+Sinuses suborbital,FIBRIN CONCREMENTS,FIBRIN CONCREMENTS,Respiratory,Sinuses suborbital,Fibrin,,Yes,Yes
+Intestines,BLOODY CONTENTS IN CAECA,BLOODY CONTENTS IN CAECA,Gastrointestinal,Caeca,Hemorrhage,,Yes,Low
+Intestines,BLACKISH CONTENT OF DUODENUM,BLACKISH CONTENT OF DUODENUM,Gastrointestinal,Duodenum,Hemorrhage,,Yes,Low
+Liver,FOCAL NECROSIS,FOCAL NECROSIS,Liver,Liver,Necrosis - ulcer,,Yes,Yes
+Liver,PINPOINT FOCAL NECROSIS,PINPOINT FOCAL NECROSIS,Liver,Liver,Necrosis - ulcer,,Yes,Yes
+Another,PODODERMATITIS,PODODERMATITIS,Musculo-skeletal,Feet pad,Necrosis - ulcer,,Yes,Yes
+Femoral head,BILATERAL NECROSIS,BILATERAL NECROSIS,Musculo-skeletal,Femoral head,Necrosis - ulcer,,Yes,Yes
+Femoral head,UNILATERAL NECROSIS,UNILATERAL NECROSIS,Musculo-skeletal,Femoral head,Necrosis - ulcer,,Yes,Yes
+Kidneys,PALE,PALE,Kidney and ureters,Kidney,Pale,,No,Low
+Liver,PALE,PALE,Liver,Liver,Pale,,No,Low
+Spleen,PALE,PALE,Spleen,Spleen,Pale,,No,Low
+Heart,AMBER CLOURED LIQUID IN PERICARDIAL SAC,AMBER CLOURED LIQUID IN PERICARDIAL SAC,Cardio-vascular,Pericardium,Swelling or edema,,Yes,Low
+Heart,STRAW COLOURED FLUID IN THE PERICARDIAL SAC,AMBER CLOURED LIQUID IN PERICARDIAL SAC,Cardio-vascular,Pericardium,Swelling or edema,,Yes,Low
+Heart,STRAW-YELLOW LIQUID IN PERICARDIAL SAC,AMBER CLOURED LIQUID IN PERICARDIAL SAC,Cardio-vascular,Pericardium,Swelling or edema,,Yes,Low
+Another,STRAW COLOURED FLUID IN CELOMIC  CAVITY,STRAW COLOURED FLUID IN CELOMIC  CAVITY,Celomic cavity,Celomic cavity,Swelling or edema,,Yes,Low
+Kidneys,EDEMA,EDEMA,Kidney and ureters,Kidney,Swelling or edema,,Yes,Low
+Joints,CLOUDY FLUID IN JOINT CAVITY ,CLOUDY FLUID IN JOINT CAVITY ,Musculo-skeletal,Joints,Swelling or edema,,Yes,Yes
+Joints,STRAW COLOURED FLUID IN JOINT CAVITY,STRAW COLOURED FLUID IN JOINT CAVITY,Musculo-skeletal,Joints,Swelling or edema,,Yes,Yes
+Joints,SWELLING THE AREA OF JOINTS,SWELLING THE AREA OF JOINTS,Musculo-skeletal,Joints,Swelling or edema,,Yes,Yes
+Lungs,EDEMA,EDEMA,Respiratory,Lung,Swelling or edema,,Yes,Low
+Heart,RIGHT-VENTRICULAR DILETATION,RIGHT-VENTRICULAR DILETATION,Cardio-vascular,Right-ventricular,"Thining, distended",,Yes,Low
+Intestines,DISTENDED RECTUM WITH FECES,DISTENDED RECTUM WITH FECES,Gastrointestinal,Rectum,"Thining, distended",,No,Low
+Kidneys,URETERS FILLED WITH URATES,URETERS FILLED WITH URATES,Kidney and ureters,Ureters,Urates,,Yes,Yes
+Bursa of Fabricius,HYPEREMIA,HYPEREMIA,Bursa of Fabricius,Bursa of Fabricius,Vascular congestion,,Yes,Low
+Heart,ECCHYMOSIS IN MYOCARDIUM ,ECCHYMOSIS IN MYOCARDIUM ,Cardio-vascular,Myocardium,Vascular congestion,,Count,Yes
+Heart,EPICARDIAL ECCHYMOSES,EPICARDIAL ECCHYMOSES,Cardio-vascular,Pericardium,Vascular congestion,,Count,Yes
+Kidneys,HYPEREMIA,HYPEREMIA,Kidney and ureters,Kidney,Vascular congestion,,Count,Low
+Liver,ECCHYMOSIS,ECCHYMOSIS,Liver,Liver,Vascular congestion,,Count,Low
+Liver,HYPEREMIA,HYPEREMIA,Liver,Liver,Vascular congestion,,Count,Low
+Trachea,HYPEREMIA IN TRACHEAL MUCOSA,HYPEREMIA IN TRACHEAL MUCOSA,Respiratory,Trachea,Vascular congestion,,Count,No
+Liver,PETECHIAE,PETECHIAE,Liver,Liver,Vascular congestion,,Count,Low
+Muscle,ECCHYMOSIS IN LEG MUSCLES,ECCHYMOSIS IN LEG MUSCLES,Musculo-skeletal,Muscle,Vascular congestion,,Yes,Yes
+Muscle,ECCHYMOSIS IN PECTORAL MUSCLES,ECCHYMOSIS IN PECTORAL MUSCLES,Musculo-skeletal,Muscle,Vascular congestion,,Yes,Yes
+Muscle,ECCHYMOSIS IN SHANK AND THIGH MUSCLES,ECCHYMOSIS IN SHANK AND THIGH MUSCLES,Musculo-skeletal,Muscle,Vascular congestion,,Yes,Yes
+Muscle,ECCHYMOSIS IN SHANK MUSCLES,ECCHYMOSIS IN SHANK MUSCLES,Musculo-skeletal,Muscle,Vascular congestion,,Yes,Yes
+Muscle,ECCHYMOSIS IN THIGH MUSCLES,ECCHYMOSIS IN THIGH MUSCLES,Musculo-skeletal,Muscle,Vascular congestion,,Yes,Yes
+Muscle,HEMORRHAGES IN LEG MUSCLES,HEMORRHAGES IN LEG MUSCLES,Musculo-skeletal,Muscle,Hemorrhage,,Yes,Yes
+Lungs,HYPEREMIA,HYPEREMIA,Respiratory,Lung,Vascular congestion,,Count,Low
+Spleen,ECCHYMOSIS,ECCHYMOSIS,Spleen,Spleen,Vascular congestion,,Count,Low
+Spleen,HYPEREMIA,HYPEREMIA,Spleen,Spleen,Vascular congestion,,Count,Low
+Another,PERSISTENT YOLK SAC,PERSISTENT YOLK SAC,Celomic cavity,Celomic cavity,Yolk sac,,Yes,Yes

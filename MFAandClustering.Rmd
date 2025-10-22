@@ -1,0 +1,534 @@
+---
+title: "MFA and clustering"
+author: "Camille Delavenne"
+date: "2025-08-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(bookdown)
+library(knitr)
+
+opts_chunk$set(echo = FALSE)
+opts_chunk$set(fig.width=12, fig.height=8, warning=FALSE, message=FALSE) 
+opts_chunk$set(tab.cap.style = "Table Caption")
+knit_hooks$set(inline = function(x) {prettyNum(x,big.mark=",")})
+```
+
+
+
+# Data set definition
+
+```{r, dpi=200 }
+
+#Removing variables as defined in the paper methodology
+
+newDF5<- data_full %>% dplyr::select (-Id_chickenhouse, -ATBrestprod, -ATBfirstweek, 
+                                      -circulation_IB1_MASS, -circulation_IB1_793B, -circulation_IB1_QX, 
+                                      -circulation_IB1_VAR2, -circulation_IB1_D274, -circulation_IB1_IB80,
+                                      -CelomiccavityCyst, -CelomiccavityYolksac, -GastrointestinalHemorrhage,
+                                       -KidneyanduretersPale, -KidneyanduretersSwellingoredema, 
+                                      -LiverPale, -MusculoskeletalFibrin, -SpleenPale, -BursaofFabriciusChangeincomposition,
+                                      -BursaofFabriciusVascularcongestion, -CardiovascularVascularcongestion , 
+                                      -CelomiccavitySwellingoredema,   -GastrointestinalHemorrhage,
+                                      -GastrointestinalThiningdistended , -LiverNecrosisulcer,
+                                      -MusculoskeletalHemorrhage, -RespiratoryChangeincomposition,
+                                      -Avibacteriumspp,  -Pseudomonasaeruginosa,-Enterococcuscasseliflavus,
+                                      -Clostridiumsporogenes, -Enterococcusgallinarum, -Enterococcusavium, 
+                                      -Escherichiacoliexternal, 
+                                      
+                                       -Id_farm,  -ATBpfree) %>% 
+  dplyr::select ( farmtype, NUTS3, season,  ATBuse, EPEF, FPLS, MeanWeightAtSlaughter, MeanAgeAtSlaughter, FCR,
+                                    Condemnation, Mortality, DOA, everything () ) 
+
+#Reordering data set to test hypothesis about FPLS(Feet path lesion score)
+newDF6<- newDF5 %>% dplyr::select ( farmtype, NUTS3, season,  ATBuse, EPEF, MeanWeightAtSlaughter, MeanAgeAtSlaughter, FCR,
+                                    Condemnation, Mortality, FPLS, DOA, everything () )  
+
+#Removing necropsy lesion without a low confidence score
+newDF7 <- newDF5 %>% dplyr::select ( -RespiratoryVascularcongestion, -SpleenVascularcongestion, -LiverVascularcongestion,
+                                     -KidneyanduretersVascularcongestion,
+                                    -CardiovascularThiningdistended, -RespiratorySwellingoredema,
+                                    -CardiovascularChangeincomposition, -CardiovascularSwellingoredema)  
+
+
+```
+
+
+# Results
+## MCA on final data: supplementary variables = (EPEF, contexte, aethiologic agents, FPLS lesions as a single group), two supplementary individual = (8, 89)
+
+
+```{r, dpi=200}
+res.MFAfull<-MFA(newDF5,group=c( 4,1, 1, 3,3,
+                           21, 13,  4, 3), 
+             type=c("n","s","s","s", "s",
+                    "n", "n", "n", "n"), 
+             name.group=c( "Context","EPEF","FPLS", "Performance", "Health/welfare", 
+                          "Lesion", "Bacterio","Para", "Viro"),
+             num.group.sup=c(1,2,3, 7,8,9),
+             ind.sup= c(89, 8),
+             graph=FALSE) 
+  
+#Main plots - dimension 1 and 2
+plot.MFA(res.MFAfull, choix="ind",lab.par=FALSE,title="Individual factor map", cex.label =1, cex.axis= 2, cex.main = 1, cex= 1, lab.var=F, lab.ind=T )
+plot.MFA(res.MFAfull, choix="var",habillage='group',title="Correlation circle",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+plot.MFA(res.MFAfull, choix="group",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+
+#Main plots - dimension 3 and 4
+plot.MFA(res.MFAfull, axes = c(3,4), choix="ind",lab.par=FALSE,title="Individual factor map", cex.label =1, cex.axis= 2, cex.main = 1, cex= 1, lab.var=F, lab.ind=T )
+plot.MFA(res.MFAfull, axes = c(3,4), choix="var",habillage='group',title="Correlation circle",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+plot.MFA(res.MFAfull, axes = c(3,4), choix="group",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+
+
+# Maps to represent qualitative categories
+circle <- plot.MFA(res.MFAfull, choix="var",habillage='group',title="Correlation circle",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5 ) +
+  theme(legend.position="bottom", legend.text = element_text(size = 16), plot.tag.position = "top", plot.tag = element_text(hjust = 0)) + labs (tag = "(a)") 
+
+group <- plot.MFA(res.MFAfull, choix="group",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5) +
+  theme( plot.tag.position = "top", plot.tag = element_text(hjust = 0)) + labs (tag = "(b)") 
+
+fig <- cowplot::plot_grid(circle, group, ncol = 2)
+
+#Creating data set for figure
+quali.var <- res.MFAfull$quali.var$v.test %>% as.data.frame %>%  filter (Dim.1>1.96 | Dim.1< -1.96 | Dim.2> 1.96 |Dim.2 < -1.96 )%>%  row.names()
+quali.var.sup <- res.MFAfull$quali.var.sup$v.test %>% as.data.frame %>%  filter (Dim.1>1.96 | Dim.1< -1.96 | Dim.2> 1.96 |Dim.2 < -1.96 )%>%  row.names()
+quali.var.coord <- res.MFAfull$quali.var$coord  %>% as.data.frame %>% rownames_to_column(var = "name") %>% filter (name %in% quali.var) %>% dplyr::select (name, Dim.1, Dim.2) %>% mutate (type = "Active - variable present")
+quali.var.sup.coord <- res.MFAfull$quali.var.sup$coord  %>% as.data.frame %>% rownames_to_column(var = "name") %>% filter (name %in% quali.var.sup)  %>% dplyr::select (name, Dim.1, Dim.2) %>% mutate (type = "Supplementary - variable present")
+
+plot.dim12 <- quali.var.coord %>% rbind (quali.var.sup.coord) %>% left_join(plot.dim12name, by = c ("name" = "Name")) %>%  mutate (type2 = " - variable absent")
+
+qualicat <- ggplot (plot.dim12, aes (x = Dim.1, y=Dim.2, fill = type2, color = type)) +
+  geom_point (data = plot.dim12[plot.dim12$Presence == "Y", ], aes (color= type), size = 3) +
+  scale_fill_manual (values = c("grey"), guide = guide_legend(override.aes = list( size = 3, color = "grey" ))) + 
+  ggrepel:: geom_text_repel(data = plot.dim12[plot.dim12$Presence == "N", ], aes( label = Clean.name), parse = TRUE, min.segment.length = 0, force = 1, position = position_jitter(seed = 2), size = 4, alpha = 0.8, color = "grey")+
+  ggrepel:: geom_text_repel(data = plot.dim12[plot.dim12$Presence == "Y", ], aes( label = Clean.name), parse = TRUE, min.segment.length = 0, force = 1, position = position_jitter(seed = 2), size = 5)+ 
+  geom_point (data = plot.dim12[plot.dim12$Presence == "N", ], size = 2, color = "grey") +
+  geom_point (data = plot.dim12[plot.dim12$Presence == "Y", ], size = 2) +
+   theme_minimal() +
+  xlab("Dim 1")+ 
+  ylab("Dim 2")+
+  ggtitle("Qualitative categories")+
+  facet_wrap(~type) + 
+  theme(plot.title= element_text(size = 22, hjust = 0.5, face="bold"),
+       legend.text = element_text(size = 18),
+        axis.title.x = element_text(size = 18, face="bold"), 
+      axis.title.y = element_text(size = 18, face="bold"),
+       axis.text.x = element_text(size = 18),
+      axis.text.y = element_text(size = 18),
+      strip.text.x = element_blank())+
+  theme(legend.position="bottom", legend.title = element_blank()) +
+  theme( plot.tag.position = "top", plot.tag = element_text(hjust = 0)) + labs (tag = "(c)") 
+
+qualicat
+
+fig_combined<- cowplot::plot_grid(fig, qualicat, nrow = 2,  rel_heights = c(0.55,0.55))
+
+#Summary of the results
+summary (res.MFAfull)
+
+```
+
+
+## Clustering on final data: supplementary variables = (EPEF, contexte, aethiologic agents, FPLS lesions as a single group), two supplementary individual = (8, 89)
+
+
+```{r, dpi=400}
+#Cluster analysis
+res.HCPC1full<-HCPC(res.MFAfull,  consol=TRUE, graph=FALSE) 
+
+#Plotting inertia
+plot.HCPC(res.HCPC1full,choice='bar',title='Inertia gain')
+
+#Plotting clusters
+fviz_cluster(res.HCPC1full, 
+            ggtheme = theme_minimal(),
+            repel = TRUE,
+            palette = c( "#034471","#E30613","#B2B2B2" ),  
+            pointsize=3, 
+            show.clust.cent= TRUE, 
+            geom="point")+ 
+theme(legend.text = element_text(size = 30),
+        axis.title.x = element_text(size = 30), 
+      axis.title.y = element_text(size = 30),
+       axis.text.x = element_text(size = 20),
+      axis.text.y = element_text(size = 20),
+      title = element_blank())  
+
+#Plotting hierchical tree using the same color than the cluster plot
+dd <- color_branches(res.HCPC1full$call$t$tree,3, col = c("#E30613", "#034471","#B2B2B2" ))
+plot(dd) 
+
+#Cluster main description
+res.HCPC1full$call$t
+res.HCPC1full$desc.var
+res.HCPC1full$desc.axes
+res.HCPC1full$desc.ind
+
+
+#Extracting information to create tables presenting the cluster results 
+category1 <- res.HCPC1full[["desc.var"]][["category"]][["1"]] %>% 
+  as.data.frame %>% 
+  rownames_to_column(var = "class") %>% 
+  mutate (class = str_remove_all(class, ".*=")) %>% 
+  mutate (Cluster_1_p.value = case_when (p.value <0.05 & (p.value > 0.01 | p.value ==0.01) ~ "*",
+                                         p.value <0.01 & (p.value > 0.001 | p.value ==0.001)~ "**",
+                                         p.value <0.001 ~ "***"),
+          Cluster_1_v.test = v.test) %>% 
+  dplyr::select (class, Cluster_1_p.value, Cluster_1_v.test)
+
+category2 <- res.HCPC1full[["desc.var"]][["category"]][["2"]] %>% 
+  as.data.frame %>% 
+  rownames_to_column(var = "class") %>% 
+  mutate (class = str_remove_all(class, ".*=")) %>% 
+  mutate (Cluster_2_p.value = case_when (p.value <0.05 & (p.value > 0.01 | p.value ==0.01) ~ "*",
+                                         p.value <0.01 & (p.value > 0.001 | p.value ==0.001)~ "**",
+                                         p.value <0.001 ~ "***"),
+          Cluster_2_v.test = v.test) %>% 
+  dplyr::select (class, Cluster_2_p.value, Cluster_2_v.test)
+
+category3 <- res.HCPC1full[["desc.var"]][["category"]][["3"]] %>% 
+  as.data.frame %>% 
+  rownames_to_column(var = "class") %>% 
+  mutate (class = str_remove_all(class, ".*=")) %>% 
+  mutate (Cluster_3_p.value = case_when (p.value <0.05 & (p.value > 0.01 | p.value ==0.01) ~ "*",
+                                         p.value <0.01 & (p.value > 0.001 | p.value ==0.001)~ "**",
+                                         p.value <0.001 ~ "***"),
+          Cluster_3_v.test = v.test) %>% 
+  dplyr::select (class, Cluster_3_p.value, Cluster_3_v.test)
+
+
+table1B <-res.HCPC1full$data.clust%>% 
+  dplyr::select (-MeanWeightAtSlaughter, - MeanAgeAtSlaughter, - FCR, -Condemnation, -Mortality, -DOA, -FPLS, -EPEF) %>% 
+  rownames_to_column(var = "rowname") %>% 
+  pivot_longer(cols = farmtype:circulation_IB1, 
+               names_to = "variable", 
+               values_to = "class") %>%  
+  ungroup () %>% 
+  mutate (n = 1) %>% 
+  group_by(clust, variable, class) %>% 
+  mutate (n = sum(n)) %>% 
+  ungroup () %>% 
+  arrange (clust) %>% 
+  dplyr::select (-rowname) %>% 
+  pivot_wider(names_from = clust, values_from = n, values_fill = 0, names_prefix = "Cluster_", values_fn = ~ unique (.x)) %>% 
+  mutate ("All" = rowSums (dplyr::select(., "Cluster_1", "Cluster_2", "Cluster_3" ),na.rm = TRUE )) %>% 
+  mutate (Cluster_1_prop =  Cluster_1/ nrow(res.HCPC1full$data.clust[res.HCPC1full$data.clust$clust == 1, ])*100,
+          Cluster_2_prop =  Cluster_2/ nrow(res.HCPC1full$data.clust[res.HCPC1full$data.clust$clust == 2, ])*100,
+          Cluster_3_prop =  Cluster_3/ nrow(res.HCPC1full$data.clust[res.HCPC1full$data.clust$clust == 3, ])*100,
+          All_prop =  All/ nrow(res.HCPC1full$data.clust)*100) %>% 
+  mutate (group = case_when(variable %in% c ("farmtype", "NUTS3", "ATBpfree", "ATBuse", "season") ~ "Contextual",
+                            variable %in% c ("Bordetellaavium", "Bordetellahinzii",  "Escherichiacoliinternal", "Enterococcuscecorum", "Enterococcusfaecalis","Enterococcusfaecium" ,"Enterococcushirae",  "Gallibacteriumanatis", "Klebsiellapneumoniae", "Ornithobacteriumrhinotracheale", "Riemerellaanatipestifer", "Staphylococcusspp", "Clostridiumperfringens") ~ "Bacteria",
+                            variable %in% c ("circulation_IBD", "circulation_IB1", "circulation_TRT") ~ "Viral",
+                            variable %in% c ("Dudonenum", "Cecum", "Rectum", "MeckelDiverticulum") ~ "Eimeria",
+                            .default = "Lesion")) %>% 
+  arrange (group, variable, class) %>% 
+  left_join(category1 , by = "class") %>% 
+  left_join(category2 , by = "class") %>% 
+  left_join(category3 , by = "class") %>% 
+
+  dplyr::select (group, variable, class, All, All_prop, Cluster_1, Cluster_1_prop,Cluster_1_p.value, Cluster_1_v.test, Cluster_2, Cluster_2_prop, Cluster_2_p.value, Cluster_2_v.test, Cluster_3, Cluster_3_prop,Cluster_3_p.value, Cluster_3_v.test) %>%  
+
+  mutate (class = str_remove_all(class, ".*_"))
+
+qcategory1 <- res.HCPC1full[["desc.var"]][["quanti"]][["1"]] %>% 
+as.data.frame %>% 
+rownames_to_column(var = "class") %>% 
+mutate (class = str_remove_all(class, ".*=")) %>% 
+mutate (Cluster_1_p.value = case_when (p.value <0.05 & (p.value > 0.01 | p.value ==0.01) ~ "*",
+                                      p.value <0.01 & (p.value > 0.001 | p.value ==0.001)~ "**",
+                                     p.value <0.001 ~ "***"),
+     Cluster_1_v.test = v.test) %>% 
+dplyr::select (class, Cluster_1_p.value, Cluster_1_v.test)
+
+qcategory2 <- res.HCPC1full[["desc.var"]][["quanti"]][["2"]] %>% 
+  as.data.frame %>% 
+  rownames_to_column(var = "class") %>% 
+  mutate (class = str_remove_all(class, ".*=")) %>% 
+  mutate (Cluster_2_p.value = case_when (p.value <0.05 & (p.value > 0.01 | p.value ==0.01) ~ "*",
+                                         p.value <0.01 & (p.value > 0.001 | p.value ==0.001)~ "**",
+                                         p.value <0.001 ~ "***"),
+          Cluster_2_v.test = v.test) %>% 
+  dplyr::select (class,  Cluster_2_p.value, Cluster_2_v.test)
+
+qcategory3 <- res.HCPC1full[["desc.var"]][["quanti"]][["3"]] %>% 
+  as.data.frame %>% 
+  rownames_to_column(var = "class") %>% 
+  mutate (class = str_remove_all(class, ".*=")) %>% 
+  mutate (Cluster_3_p.value = case_when (p.value <0.05 & (p.value > 0.01 | p.value ==0.01) ~ "*",
+                                         p.value <0.01 & (p.value > 0.001 | p.value ==0.001)~ "**",
+                                         p.value <0.001 ~ "***"),
+          Cluster_3_v.test = v.test) %>% 
+  dplyr::select (class, Cluster_3_p.value, Cluster_3_v.test)
+
+
+table2B <-res.HCPC1full$data.clust%>% 
+  dplyr::select (MeanWeightAtSlaughter, MeanAgeAtSlaughter, FCR, Condemnation, Mortality, DOA, FPLS, EPEF) %>% 
+  rownames_to_column(var = "rowname") %>% 
+  pivot_longer(cols = MeanWeightAtSlaughter:EPEF, 
+               names_to = "class", 
+               values_to = "value") %>% 
+  group_by(class) %>% 
+  summarise(Mean_Overall = mean(value), sd_Overall = sd (value))
+
+table2B <-res.HCPC1full$data.clust%>% 
+  dplyr::select (clust, MeanWeightAtSlaughter, MeanAgeAtSlaughter, FCR, Condemnation, Mortality, DOA, FPLS, EPEF) %>% 
+  rownames_to_column(var = "rowname") %>% 
+  pivot_longer(cols = MeanWeightAtSlaughter:EPEF, 
+               names_to = "class", 
+               values_to = "value") %>% 
+  group_by(clust, class) %>% 
+  summarise(Mean = mean(value), sd = sd (value))%>%  
+  ungroup() %>%
+  pivot_wider(names_from = clust, values_from = c(Mean, sd)) %>% 
+  ungroup() %>% 
+  left_join(table2B, by = "class") %>% 
+  left_join(qcategory1 , by = "class") %>% 
+  left_join(qcategory2 , by = "class") %>% 
+  left_join(qcategory3 , by = "class") %>% 
+
+  dplyr::select (class, Mean_Overall, sd_Overall, Mean_1, sd_1, Cluster_1_p.value, Cluster_1_v.test, Mean_2, sd_2, Cluster_2_p.value, Cluster_2_v.test, Mean_3, sd_3, Cluster_3_p.value, Cluster_3_v.test) 
+
+
+
+
+
+```
+
+# Supplementary results
+## Addiitonal result taking into consideration presnece of 4 clusters
+```{r, dpi=200}
+
+res.HCPCother1<-HCPC(res.MFAfull,nb.clust=4, kk=Inf,consol=TRUE,graph=FALSE) 
+
+plot.HCPC(res.HCPCother1,choice='tree',title='Hierarchical tree')
+plot.HCPC(res.HCPCother1,choice='bar',title='Inertia gains')
+plot.HCPC(res.HCPCother1,choice='map',draw.tree=FALSE,title='Factor map',ind.names=FALSE, centers.plot=TRUE)
+
+#Cluster main description
+res.HCPCother1$desc.axes
+res.HCPCother1$desc.ind
+res.HCPCother1$desc.var
+
+```
+
+
+# Supplementary analysis
+
+## Analysis 1: 
+
+### MCA on: supplementary variables = (EPEF, contexte, aethiologic agents), supplementary individual = (8, 89)
+
+```{r, dpi=200}
+res.MFAfullFLG<-MFA(newDF6,group=c( 4,1, 3,4,
+                           21, 13,  4, 3), # 3,3,1, 11,11,6,29,18,27
+             type=c("n","s","s", "s",
+                    "n", "n", "n", "n"), #n,n,s,s,s,s,n,n,n,n,n,n,n,n,n
+             name.group=c( "Context","EPEF", "Performance", "Health/welfare",
+                          "Lesion", "Bacterio","Para", "Viro"),
+             num.group.sup=c(1,2,6,7,8),
+             ind.sup= c(89, 8),
+             graph=FALSE) 
+
+# Main projection of the MFA
+plot.MFA(res.MFAfullFLG, choix="var",habillage='group',title="Correlation circle",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+plot.MFA(res.MFAfullFLG, choix="group",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+
+# Main results of the MFA
+summary (res.MFAfullFLG)
+
+```
+
+
+### Clustering on: supplementary variables = (EPEF, contexte, aethiologic agents, FPLS lesions as a single group), supplementary individual = (8, 89)
+
+```{r, dpi=400}
+res.HCPC1fullFPG<-HCPC( res.MFAfullFLG,  consol=TRUE, graph=FALSE) 
+
+#Main projection and figure of the analysis
+plot.HCPC(res.HCPC1fullFPG,choice='tree',title='Hierarchical tree')
+plot.HCPC(res.HCPC1fullFPG,choice='bar',title='Inertia gain')
+fviz_cluster(res.HCPC1fullFPG, 
+   ggtheme = theme_minimal(),palette = "Set2",  pointsize=3, show.clust.cent= TRUE, geom="point")+ 
+theme(axis.text.x = element_text(size = 15))  
+
+# Main results of the HC
+res.HCPC1fullFPG$call$t
+
+res.HCPC1fullFPG$desc.var
+res.HCPC1fullFPG$desc.axes
+res.HCPC1fullFPG$desc.ind
+
+```
+
+
+## Analysis 2: 
+### MCA on: supplementary variables = (EPEF, contexte, aethiologic agents), no supplementary individual
+
+```{r, dpi=200}
+res.MFAfulloutlier<-MFA(newDF5,group=c( 4,1, 1, 3,3,
+                           21, 13,  4, 3), # 3,3,1, 11,11,6,29,18,27
+             type=c("n","s","s","s", "s",
+                    "n", "n", "n", "n"), #n,n,s,s,s,s,n,n,n,n,n,n,n,n,n
+             name.group=c( "Context","EPEF","FPLS", "Performance", "Health/welfare", 
+                          "Lesion", "Bacterio","Para", "Viro"),
+             num.group.sup=c(1,2,3, 7,8,9),
+             graph=FALSE) 
+
+#Main projection and figure of the analysis
+plot.MFA(res.MFAfulloutlier, choix="ind",lab.par=FALSE,title="Individual factor map", cex.label =1, cex.axis= 2, cex.main = 1, cex= 1, lab.var=F, lab.ind=T )
+plot.MFA(res.MFAfulloutlier, choix="var",habillage='group',title="Correlation circle",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+plot.MFA(res.MFAfulloutlier, choix="group",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+
+# Main results of the MFA
+summary (res.MFAfulloutlier)
+#dimdesc(res.MFAfulloutlier, axes = 1:5)
+
+```
+
+### Clustering on: supplementary variables = (EPEF, contexte, aethiologic agents, FPLS lesions as a single group), no supplementary individual
+
+```{r, dpi=400}
+
+res.HCPC1fulloutlier<-HCPC(res.MFAfulloutlier,  consol=TRUE, graph=FALSE) 
+
+#Main projection and figure of the analysis
+plot.HCPC(res.HCPC1fulloutlier,choice='tree',title='Hierarchical tree')
+plot.HCPC(res.HCPC1fulloutlier,choice='bar',title='Inertia gain')
+fviz_cluster(res.HCPC1fulloutlier, 
+   ggtheme = theme_minimal(),palette = "Set2",  pointsize=3, show.clust.cent= TRUE, geom="point")+ 
+theme(axis.text.x = element_text(size = 15)) 
+
+# Main results of the HC
+res.HCPC1fulloutlier$call$t
+res.HCPC1fulloutlier$desc.var
+res.HCPC1fulloutlier$desc.axes
+res.HCPC1fulloutlier$desc.ind
+
+```
+
+
+## Analysis 3: 
+### MCA on: supplementary variables = (aethiologic agents, FPLS lesions as a single group), one supplementary individual (89)
+
+```{r, dpi=200}
+res.MFAfulloutlier1<- MFA(newDF5,group=c( 4,1,1, 3,3,
+                           21, 13,  4, 3), 
+             type=c("n","s","s","s", "s",
+                    "n", "n", "n", "n"), 
+             name.group=c( "Context","EPEF","FPLS", "Performance", "Health/welfare",
+                          "Lesion", "Bacterio","Para", "Viro"),
+             num.group.sup=c(1,2,3,7,8,9),
+             ind.sup= c(89),
+             graph=FALSE) 
+
+#Main projection and figure of the analysis
+plot.MFA(res.MFAfulloutlier1, choix="ind",lab.par=FALSE,title="Individual factor map", cex.label =1, cex.axis= 2, cex.main = 1, cex= 1, lab.var=F, lab.ind=T )
+plot.MFA(res.MFAfulloutlier1, choix="var",habillage='group',title="Correlation circle",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+plot.MFA(res.MFAfulloutlier1, choix="group",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+
+# Main results of the MFA
+summary (res.MFAfulloutlier1)
+#dimdesc(res.MFAfulloutlier1, axes = 1:5)
+
+```
+
+### Clustering on: supplementary variables = (EPEF, contexte, aethiologic agents, FPLS lesions), one supplementary individual c(89)
+
+```{r, dpi=400}
+
+
+res.HCPC1fulloutlier1<-HCPC(res.MFAfulloutlier1,  consol=TRUE, graph=FALSE) 
+
+#Main projection and figure of the analysis
+plot.HCPC(res.HCPC1fulloutlier1,choice='tree',title='Hierarchical tree')
+plot.HCPC(res.HCPC1fulloutlier1,choice='bar',title='Inertia gain')
+fviz_cluster(res.HCPC1fulloutlier1, 
+   ggtheme = theme_minimal(),palette = "Set2",  pointsize=3, show.clust.cent= TRUE, geom="point")+ 
+theme(axis.text.x = element_text(size = 15))  
+
+# Main results of the HC
+res.HCPC1fulloutlier1$call$t
+res.HCPC1fulloutlier1$desc.var
+res.HCPC1fulloutlier1$desc.axes
+res.HCPC1fulloutlier1$desc.ind
+
+```
+
+
+## Analysis 4: 
+### MCA on: removed lesions with low confidence score, supplementary variables = (EPEF, contexte, aethiologic agents, FPLS lesions as a single group), two supplementary individual (8, 89)
+
+```{r, dpi=200}
+res.MFAlesion<-MFA(newDF7,group=c( 4,1, 1, 3,3,
+                           13, 13,  4, 3), # 3,3,1, 11,11,6,29,18,27
+             type=c("n","s","s","s", "s",
+                    "n", "n", "n", "n"), #n,n,s,s,s,s,n,n,n,n,n,n,n,n,n
+             name.group=c( "Context","EPEF","FPLS", "Performance", "Health/welfare", 
+                          "Lesion", "Bacterio","Para", "Viro"),
+             num.group.sup=c(1,2,3, 7,8,9),
+             ind.sup= c(89,8),
+             graph=FALSE) 
+
+#Main projection and figure of the analysis
+plot.MFA(res.MFAlesion, choix="ind",lab.par=FALSE,title="Individual factor map", cex.label =1, cex.axis= 2, cex.main = 1, cex= 1, lab.var=F, lab.ind=T )
+plot.MFA(res.MFAlesion, choix="var",habillage='group',title="Correlation circle",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+plot.MFA(res.MFAlesion, choix="group",cex.label =2, cex.axis= 2, cex.main = 2, cex= 1.5)
+
+# Main results of the MFA
+summary (res.MFAlesion)
+#dimdesc(res.MFAlesion, axes = 1:5)
+
+```
+
+### Clustering on: removed lesions with low confidence score, supplementary variables = (EPEF, contexte, aethiologic agents, FPLS lesions as a single group), two supplementary individual (89, 8)
+
+
+```{r, dpi=400}
+
+
+res.HCPC1lesion<-HCPC(res.MFAlesion,  consol=TRUE, graph=FALSE) 
+
+# Main projection and figure of the analysis
+plot.HCPC(res.HCPC1lesion,choice='tree',title='Hierarchical tree')
+plot.HCPC(res.HCPC1lesion,choice='bar',title='Inertia gain')
+fviz_cluster(res.HCPC1lesion, 
+   ggtheme = theme_minimal(),palette = "Set2",  pointsize=3, show.clust.cent= TRUE, geom="point")+ 
+theme(axis.text.x = element_text(size = 15))  + 
+plot.HCPC(res.HCPC1lesion,choice='3D.map',ind.names=FALSE,centers.plot=FALSE,angle=85,title='Hierarchical tree on the factor map')
+
+# Main results of the HC
+res.HCPC1lesion$call$t
+res.HCPC1lesion$desc.var
+res.HCPC1lesion$desc.axes
+res.HCPC1lesion$desc.ind
+
+```
+
+
+# Comparing analysis - creating an alluvial grpah between all the hypothesis: 
+
+```{r, dpi=200}
+AClean <- res.HCPC1full[["data.clust"]] %>%  rownames_to_column(var = "id") %>%  dplyr::select (id, clust)%>% mutate (clust = case_match( clust, c("1") ~ "Fibrin", c("3") ~ "High FCR", c("2") ~ "Healthy")) %>% rename (A1.Main = clust ) 
+AFPD <- res.HCPC1fullFPG[["data.clust"]] %>%  rownames_to_column(var = "id") %>%  dplyr::select (id, clust) %>% mutate (clust = case_match( clust, c("1") ~ "Fibrin", c("2") ~ "Healthy", c("3") ~ "High FCR"))  %>% rename (A3.FeetPadDermitis  = clust )
+ANoOut <- res.HCPC1fulloutlier[["data.clust"]] %>%  rownames_to_column(var = "id") %>%  dplyr::select (id, clust) %>% mutate (clust = case_match( clust, c("1") ~ "No fibrin", c("2") ~ "Fibrin", c("3") ~ "Outlier SJ"))  %>% rename (A5.NoOut  = clust )
+AOut1 <- res.HCPC1fulloutlier1[["data.clust"]] %>%  rownames_to_column(var = "id") %>%  dplyr::select (id, clust) %>% mutate (clust = case_match( clust, c("1") ~ "Healthy", c("3") ~ "Fibrin", c("2") ~ "High FCR", c("4") ~ "Outlier BJ"))%>% rename ( A4.OneOut = clust )
+ALesion <- res.HCPC1lesion[["data.clust"]] %>%  rownames_to_column(var = "id") %>%  dplyr::select (id, clust) %>% mutate (clust = case_match( clust,  c("2") ~ "Healthy", c("3") ~ "High FCR", c("1") ~ "Fibrin")) %>% rename ( A2.Lesion = clust )
+
+alluvial <- AClean %>% 
+  full_join (AFPD , by = "id" )%>% 
+  full_join (ALesion, by = "id" ) %>% 
+  full_join (AOut1, by = "id" )%>% 
+  full_join (ANoOut, by = "id" )%>% 
+  pivot_longer(cols= 2:6, names_to = "Analysis",    values_to = "Cluster")
+
+ggplot(alluvial, aes(alluvium = id, x = Analysis, stratum = Cluster)) + 
+  geom_alluvium(color = "black") +
+  geom_stratum( color = "black",aes(fill=Cluster ))  + 
+  ggtitle("Flock associated clusters across different analysis/hypothesis")+
+  scale_y_discrete() +
+  ylab("Number of flocks")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 7))
+
+```
