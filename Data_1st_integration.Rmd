@@ -42,7 +42,7 @@ data_production <- data_production  %>%  dplyr::select (!where(is.logical)) %>%
 
 #defining production data
 
-data_production <- data_production %>% mutate (across (12:30, as.numeric), across (31:34, as.numeric)) %>%  
+data_production <- data_production %>% mutate (across (9:31, as.numeric)) %>%  
   mutate (Condemnation.. = Condemnation.. * 100)
 data_production$production_length_min <- day(as.period (interval (data_production$Birds.placement.date.max, data_production$End.date.min), unit="day"))
 data_production$production_length_max <- day(as.period (interval (data_production$Birds.placement.date.min, data_production$End.date.max), unit="day"))
