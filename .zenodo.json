@@ -5,7 +5,7 @@
             "orcid": "0009-0003-3334-7270",
             "affiliation": [
           { "name": "EpiMundi",
-            "name': "Utrecht University"
+            "name": "Utrecht University"
           }
         ],
             "type": "ProjectMember"
@@ -21,7 +21,7 @@
             "name": "\u015amia\u0142ek, Marcin",
             "affiliation": [
           { "name": "SLW BIOLAB (Poland)",
-            "name': "Faculty of Veterinary Medicine, University of Warmia and Mazury (Poland)"
+            "name": "Faculty of Veterinary Medicine, University of Warmia and Mazury (Poland)"
           }
             "type": "projectmember"
         },
@@ -29,7 +29,7 @@
             "name": "de Wit, Jacobus Joannes (Sjaak)",
             "affiliation": [
           { "name": "De Gezondheidsdienst voor Dieren",
-            "name': "Utrecht University"
+            "name": "Utrecht University"
           }
             "type": "projectmember"
         }
