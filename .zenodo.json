@@ -36,15 +36,12 @@
             "type": "projectmember"
         }
     ],
-    "title": "EpiMundi/delavenne-2025-polish-poultry-data-integration: Reviewer version",
-    "version": "v1.5",
     "access_right": "open",
     "keywords": [
         "Endemic Diseases",
         "Data reuse",
         "Animal health"
     ],
-    "upload_type": "software",
     "language": "eng",
     "award": [
         {"id": "00k4n6c32::101000494"}
